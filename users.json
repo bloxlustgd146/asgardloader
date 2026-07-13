@@ -8,15 +8,5 @@
         "login": "gamesense",
         "key": "333-PPP",
         "script": "main.lua"
-    },
-    {
-        "login": "brain",
-        "key": "123-ASD",
-        "script": "main.lua"
-    },
-    {
-        "login": "player2",
-        "key": "XYZ-999",
-        "script": "main.lua"
     }
 ]
