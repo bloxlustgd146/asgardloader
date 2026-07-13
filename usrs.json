@@ -8,10 +8,5 @@
         "login": "bobloh",
         "key": "333-PPP",
         "script": "main.lua"
-    },
-    {
-        "login": "pns",
-        "key": "777-PNS",
-        "script": "main.lua"
     }
 ]
