@@ -1567,8 +1567,8 @@ end
 
 menu.main = {
 	menu.space(groups.fakelag),
-	global = groups.fakelag:checkbox(_T("Enable \vasgard"), true),
-	bar = groups.fakelag:label("\a373737FF‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾"),
+	global = groups.fakelag:checkbox(_T("asgard test"), true),
+	bar = groups.fakelag:label("\a373737FF"),
 	auth_gate = groups.fakelag:checkbox("\n", false),
 	-- menu.space(groups.fakelag),
 }
