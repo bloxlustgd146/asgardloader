@@ -985,7 +985,7 @@ local _RU = {
 	["Manual yaw"] = "Ручной yaw", ["Anti-backstab"] = "Анти-бэкстаб", ["On use AA"] = "AA при use", ["Warmup AA"] = "AA на разминке",
 	["Exploits"] = "Эксплойты", ["Lag settings"] = "Настройки лага", ["Dynamic"] = "Динамика", ["Maximum"] = "Максимум",
 	["Fluctuate"] = "Флуктуация", ["Limit"] = "Лимит", ["Authorized as"] = "Вход как",
-	["Good night, asgardleaks, loser -> "] = "Доброй ночи, asgardleaks, лузер -> ", ["Good day, psgleaks, loser -> "] = "Добрый день, asgardleaks, лузер -> ",
+	["Good night, asgardleaks"] = "Доброй ночи, asgardleaks ", ["Good day, asgardleaks "] = "Добрый день, asgardleaks ",
 	["Server connection lost"] = "Нет связи с сервером", ["Access revoked — "] = "Доступ отозван — ",
 	["Reload the script to apply the interface language."] = "Перезагрузите скрипт, чтобы применить язык интерфейса.",
 	["Standing"] = "Стоя", ["Running"] = "Бег", ["Walking"] = "Шаг", ["In-air"] = "В воздухе",
