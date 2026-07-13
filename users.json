@@ -8,5 +8,25 @@
         "login": "bobloh",
         "key": "333-PPP",
         "script": "main.lua"
+    },
+    {
+        "login": "pns",
+        "key": "777-PNS",
+        "script": "main.lua"
+    },
+    {
+        "login": "templestd",
+        "key": "BOSS11",
+        "script": "main.lua"
+    },
+    {
+        "login": "danilya",
+        "key": "111-DNL",
+        "script": "main.lua"
+    },
+    {
+        "login": "skuchna",
+        "key": "000-SKC",
+        "script": "main.lua"
     }
 ]
