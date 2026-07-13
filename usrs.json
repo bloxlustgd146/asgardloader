@@ -7,6 +7,7 @@
     {
         "login": "bobloh",
         "key": "333-PPP",
-        "script": "main.lua"
+        "script": "bloomtool.lua",
+        "script": "amnesia.lua"   
     }
 ]
