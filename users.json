@@ -8,5 +8,45 @@
         "login": "bobloh",
         "key": "333-PPP",
         "script": "main.lua"
+    },
+    {
+        "login": "pns",
+        "key": "777-PNS",
+        "script": "main.lua"
+    },
+    {
+        "login": "templestd",
+        "key": "555-TMP",
+        "script": "main.lua"
+    },
+    {
+        "login": "danilya",
+        "key": "111-DNL",
+        "script": "main.lua"
+    },
+    {
+        "login": "skuchna",
+        "key": "000-SKC",
+        "script": "main.lua"
+    },
+    {
+        "login": "pns_fx",
+        "key": "888-PNX",
+        "script": "main.lua"
+    },
+    {
+        "login": "danilya99",
+        "key": "999-DLY",
+        "script": "main.lua"
+    },
+    {
+        "login": "temple_boss",
+        "key": "444-TPL",
+        "script": "main.lua"
+    },
+    {
+        "login": "skuchno_мне",
+        "key": "222-SAD",
+        "script": "main.lua"
     }
 ]
