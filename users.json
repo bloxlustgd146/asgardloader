@@ -1,7 +1,7 @@
 [
     {
-        "login": "brain",
-        "key": "ABC-123",
+        "login": "asgard",
+        "key": "god",
         "script": "main.lua"
     },
     {
@@ -11,7 +11,7 @@
     },
     {
         "login": "pns",
-        "key": "777-PNS",
+        "key": "777",
         "script": "main.lua"
     },
     {
