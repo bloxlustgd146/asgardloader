@@ -13,10 +13,5 @@
         "login": "pns",
         "key": "777-PNS",
         "script": "main.lua"
-    },
-    {
-        "login": "templestd",
-        "key": "555-TMP",
-        "script": "main.lua"
     }
 ]
