@@ -1,0 +1,13 @@
+[
+    {
+        "login": "brain",
+        "key": "ABC-123",
+        "script": "main.lua"
+    },
+
+    {
+        "login": "player2",
+        "key": "XYZ-999",
+        "script": "main.lua"
+    }
+]
