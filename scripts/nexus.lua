@@ -1,5949 +1,4424 @@
-ffi.cdef("    typedef struct {\n        char  pad_0000[20];\n        int m_nOrder;\n        int m_nSequence;\n        float m_flPrevCycle;\n        float m_flWeight;\n        float m_flWeightDeltaRate;\n        float m_flPlaybackRate;\n        float m_flCycle;\n        void *m_pOwner;\n        char  pad_0038[4];\n    } CAnimationLayer;\n")
-math.randomseed(common.get_unixtime())
-
-local v1 = (function()
-	ffi.cdef("        typedef struct {\n            long long QuadPart;\n        } LARGE_INTEGER;\n        int QueryPerformanceCounter(LARGE_INTEGER* lpPerformanceCount);\n        int QueryPerformanceFrequency(LARGE_INTEGER* lpFrequency);\n        uint64_t GetTickCount64(void);\n        uint32_t timeGetDevCaps(void* ptc, uint32_t cbtc);\n    ")
-
-	local v383 = ffi.new("LARGE_INTEGER")
-	local v384 = ffi.new("LARGE_INTEGER")
-
-	if ffi.C.QueryPerformanceFrequency(v383) ~= 1 then
-		return function()
-			return ffi.C.GetTickCount64() / 1000
-		end
-	end
-
-	local num = tonumber(v383.QuadPart)
-
-	return function()
-		-- upvalues: v384 (copy), num (copy)
-		if ffi.C.QueryPerformanceCounter(v384) ~= 1 then
-			return ffi.C.GetTickCount64() / 1000
-		end
-
-		return tonumber(v384.QuadPart) / num
-	end
-end)()
-local smoothy, pui, floor, v21, v22, v23, t2, v28, u37, t9, t18, t19, t22, u87, v89, t27, t50, t58, settings, v194, v195, n17, u200, t59, t64, t67, t68, t72, t73, t74, t75, t76, t77, t78, t79, t80
-
+local _ = require("neverlose/inspect");
+local l_base64_0 = require("neverlose/base64");
+local l_clipboard_0 = require("neverlose/clipboard");
+local v3 = "\226\128\138";
+local function v5(v4)
+    return math.floor(v4 + 0.5);
+end;
+local function v8(...)
+    local v6 = "";
+    for v7 = 1, select("#", ...) do
+        v6 = v6 .. select(v7, ...);
+    end;
+    return v6;
+end;
+local v9 = {
+    user = common.get_username(), 
+    name = "GODMODKI", 
+    build = "build", 
+    icon = "\240\159\144\151"
+};
+local v10 = nil;
+v10 = {
+    teams = {
+        [1] = "Terrorist", 
+        [2] = "Counter-Terrorist"
+    }, 
+    states = {
+        [1] = "Standing", 
+        [2] = "Running", 
+        [3] = "Walking", 
+        [4] = "Crouching", 
+        [5] = "Sneaking", 
+        [6] = "In Air", 
+        [7] = "Air Crouch", 
+        [8] = "Manual Yaw", 
+        [9] = "Freestanding"
+    }
+};
+local v11 = nil;
+v11 = {};
+local v12 = {};
 do
-	local normalize_yaw, abs, clamp, t5, v33
-
-	do
-		local v24, t8, t15
-
-		do
-			local events = require("neverlose/events")
-			local t3, n15, v97, t38, v142, v143, t39, t40, t41, t42, t45, t46, t47, t48
-
-			do
-				local v98, t29
-
-				do
-					local clipboard = require("neverlose/clipboard")
-
-					smoothy = require("neverlose/smoothy")
-
-					local t23, v93, TABS, v104
-
-					do
-						local base64 = require("neverlose/base64")
-
-						pui = require("neverlose/pui")
-
-						do
-							local _ = math.random
-						end
-
-						normalize_yaw = math.normalize_yaw
-						abs = math.abs
-
-						do
-							local _ = math.ceil
-						end
-
-						do
-							local _ = math.cos
-						end
-
-						floor = math.floor
-
-						do
-							local _ = math.fmod
-						end
-
-						do
-							local _ = math.max
-						end
-
-						do
-							local _ = math.min
-						end
-
-						do
-							local _ = math.rad
-						end
-
-						do
-							local _ = math.sin
-						end
-
-						do
-							local _ = math.sqrt
-						end
-
-						clamp = math.clamp
-
-						do
-							local concat = table.concat
-
-							function math.round(p1)
-								return p1 and math.floor(p1 + 0.5) or 0
-							end
-							function v21(p2, p3, p4)
-								return p2 + (p3 - p2) * p4
-							end
-							function v22(p5, p6)
-								for _, v in ipairs(p5) do
-									if v == p6 then
-										return true
-									end
-								end
-
-								return false
-							end
-							function v23(p7, p8, p9, p10)
-								-- upvalues: concat (copy)
-								if p7 and p7 ~= "" then
-									local t1 = {}
-									local v408 = string.len(p7) > 1 and 1 / (string.len(p7) - 1) or 1
-
-									for match in p7:gmatch(".[\128-\191]*") do
-										local v410 = p8 % 2
-
-										if v410 > 1 then
-											local v411 = 2 - v410
-
-											if v411 then
-												v410 = v411
-											end
-										end
-
-										local v412 = p9.r + (p10.r - p9.r) * v410
-										local v413 = p9.g + (p10.g - p9.g) * v410
-										local v414 = p9.b + (p10.b - p9.b) * v410
-										local v415 = p9.a + (p10.a - p9.a) * v410
-
-										t1[#t1 + 1] = "\a" .. color(v412, v413, v414, v415):to_hex() .. match
-										p8 = p8 + v408
-									end
-
-									return concat(t1)
-								end
-
-								return ""
-							end
-						end
-
-						function v24(p11)
-							return (p11:lower():gsub("\a%x%x%x%x%x%x%x%x", ""):gsub("\a{[^}]+}", ""):gsub("\a", ""):gsub("\t", ""):gsub("[\240-\244][\128-\191][\128-\191][\128-\191]", ""):gsub("[\224-\239][\128-\191][\128-\191]", ""):gsub("[\192-\223][\128-\191]", ""):gsub("default%s*", ""):gsub("%s+", " "):gsub("^%s*(.-)%s*$", "%1"))
-						end
-
-						t2 = {
-							icon = "atom",
-							name = "nexus",
-							sidebar_name = "Nexus",
-							branch = "release"
-						}
-						t3 = {
-							[1] = "Default",
-							[2] = "Standing",
-							[3] = "Running",
-							[4] = "Slowwalking",
-							[5] = "Ducking",
-							[6] = "Sneaking",
-							[7] = "In Air",
-							[8] = "In Air & Crouching"
-						};
-						({}).player_state = {
-							[1] = "Default",
-							[2] = "Standing",
-							[3] = "Running",
-							[4] = "Slowwalking",
-							[5] = "Ducking",
-							[6] = "Sneaking",
-							[7] = "In Air",
-							[8] = "In Air & Crouching"
-						}
-
-						do
-							local t4 = {
-								FL_ONGROUND = bit.lshift(1, 0),
-								FL_FROZEN = bit.lshift(1, 5)
-							}
-
-							v28 = render.screen_size()
-							t5 = {}
-
-							do
-								local s1 = "ui/beepclear.wav"
-								local s2 = "resource/warning.wav"
-								local playvol = cvar.playvol
-
-								function t5.success(...)
-									-- upvalues: playvol (copy), s1 (copy)
-									playvol:call(s1, 1)
-								end
-								function t5.failure(...)
-									-- upvalues: playvol (copy), s2 (copy)
-									playvol:call(s2, 1)
-								end
-								function t5.click()
-									-- upvalues: playvol (copy)
-									playvol:call(string.format("ui\\csgo_ui_contract_type%d", math.random(1, 10)), 1)
-								end
-							end
-
-							function v33(p12, p13, p14)
-								-- upvalues: pui (copy)
-								pui.sidebar("##nexus_notification", pui.string(p12))
-								common.add_notify(pui.string(p13), pui.string(p14))
-							end
-
-							do
-								local t6 = {
-									map = {},
-									performance = {},
-									setup = {}
-								}
-								local t7 = {
-									set = function(p15, p16)
-										-- upvalues: t6 (copy)
-										if not t6.setup[p15.name] then
-											t6.setup[p15.name] = {}
-										end
-
-										if p15.handlers[p16] then
-											return false
-										end
-
-										table.insert(t6.setup[p15.name], p16)
-										p15.handlers[p16] = p16
-
-										return true
-									end,
-									unset = function(p17, p18)
-										if not p17.handlers[p18] then
-											return false
-										end
-
-										p17.handlers[p18] = nil
-
-										return true
-									end,
-									call = function(p19, ...)
-										-- upvalues: events (copy)
-										local v427 = events[p19.name]
-
-										if v427 then
-											v427:call(...)
-										end
-									end
-								}
-
-								local function v36(p20, p21)
-									-- upvalues: events (copy), t6 (copy), v1 (copy)
-									if type(p20) == "string" then
-										events[p20](function(...)
-											-- upvalues: p20 (copy), t6 (copy), p21 (copy), v1 (copy)
-											if not EXPIRED or (not (TRIAL_REMAINING <= 0) or p20 == "shutdown") then
-												t6.performance[p20] = {}
-												xpcall(function(...)
-													-- upvalues: p21 (copy), v1 (copy), t6 (copy), p20 (copy)
-													for _, v in pairs(p21) do
-														local v1361 = v1()
-
-														v(...)
-														t6.performance[p20][v] = (v1() - v1361) * 1000
-													end
-												end, function(err)
-													-- upvalues: p20 (copy)
-													print(string.format("[%s] Error: %s", p20, err))
-												end, ...)
-
-												return
-											end
-										end)
-									end
-								end
-
-								u37 = events
-
-								if false then
-									u37 = setmetatable({}, {
-										__index = function(_, p23)
-											-- upvalues: t6 (copy), t7 (copy), v36 (copy)
-											local v432 = t6.map[p23]
-
-											if not v432 then
-												print(string.format("Registering new event: %s", p23))
-												v432 = setmetatable({
-													handlers = {},
-													name = p23
-												}, {
-													__index = t7,
-													__call = function(p24, p25, p26)
-														if p26 == nil then
-															p26 = true
-														end
-
-														p24[p26 and "set" or "unset"](p24, p25)
-													end
-												})
-												t6.map[p23] = v432
-												v36(p23, v432.handlers)
-											end
-
-											return v432
-										end
-									})
-
-									local n1 = 3
-									local n2 = 16
-
-									events.render(function()
-										-- upvalues: t6 (copy), n1 (copy), n2 (copy)
-										local v433 = render.screen_size()
-										local v434 = vector(5, v433.y * 0.25)
-
-										for k, v in pairs(t6.performance) do
-											render.text(n1, v434, color(255, 255, 255), nil, k)
-											v434.y = v434.y + n2
-
-											for i, v2 in ipairs(t6.setup[k] or {}) do
-												local v439 = v[v2] or 0
-												local v440 = string.format("  [%d]: %.3fms", i, v439)
-												local v441 = v439 > 1 and color(255, 100, 100) or color(255, 255, 255)
-
-												render.text(n1, v434, v441, nil, v440)
-												v434.y = v434.y + n2
-											end
-
-											v434.y = v434.y + 8
-										end
-									end)
-								end
-							end
-
-							t8 = {
-								list = {}
-							}
-							t8.__index = t8
-
-							function t8.new(p27, p28)
-								-- upvalues: t8 (copy), smoothy (copy)
-								if not p28 then
-								end
-
-								if t8.list[p27] == nil then
-									t8.list[p27] = smoothy.new(0)
-								end
-
-								return setmetatable({
-									name = p27
-								}, t8)
-							end
-							function t8.update(p29, p30, p31)
-								-- upvalues: t8 (copy)
-								local v447 = t8.list[p29.name]
-
-								v447:update(p30, p31)
-
-								return v447
-							end
-							function t8.clear(p32)
-								-- upvalues: t8 (copy)
-								for k, _ in pairs(t8.list) do
-									if k:find(p32) then
-										t8.list[k] = nil
-									end
-								end
-							end
-
-							t9 = {}
-
-							do
-								local t10 = {}
-								local u43 = nil
-								local u44 = nil
-								local v45 = pui.create("##WINDOWS")
-
-								v45:visibility(false)
-
-								local v46 = smoothy.new(0)
-
-								local function v47(...)
-									local ok, result = pcall(json.parse, ...)
-
-									if not ok then
-										return nil
-									end
-
-									return result
-								end
-								local function v48(...)
-									return json.stringify(...)
-								end
-								local function v49(p33, p34, p35)
-									return p33.x >= p34.x and (p33.x <= p34.x + p35.x and (p33.y >= p34.y and not (p33.y > p34.y + p35.y)))
-								end
-								local function v50(p36, p37, p38)
-									-- upvalues: clamp (copy)
-									return vector(clamp(p36.x, p37.x, p38.x), clamp(p36.y, p37.y, p38.y))
-								end
-
-								local t11 = {
-									pos = vector(),
-									prev_pos = vector(),
-									delta = vector(),
-									down = false,
-									clicked = false,
-									down_duration = 0
-								}
-
-								function t11.update()
-									-- upvalues: t11 (copy)
-									local v459 = ui.get_mouse_position()
-									local v460 = common.is_button_down(1)
-
-									t11.prev_pos = t11.pos
-									t11.pos = v459
-									t11.delta = t11.pos - t11.prev_pos
-									t11.down = v460
-									t11.clicked = v460 and not (t11.down_duration >= 0)
-
-									local v461 = t11
-									local g462 = nil
-									local g464 = nil
-									local n3 = nil
-
-									repeat
-										if g462 or not v460 then
-											g462 = false
-											n3 = -1
-											g464 = true
-										end
-
-										if g464 then
-											break
-										end
-
-										if not (t11.down_duration < 0) then
-											n3 = t11.down_duration + 1
-
-											if not n3 then
-												g462 = true
-											end
-										else
-											n3 = 0
-										end
-									until not g462
-
-									g464 = false
-									v461.down_duration = n3
-								end
-
-								local t13 = {
-									get_pos = function(p39, p40)
-										-- upvalues: v47 (copy)
-										local v467 = v47(p39.item:get())
-
-										if v467 then
-											if not p40 then
-												return vector(v467.x, v467.y)
-											end
-
-											return v467[p40]
-										end
-
-										return vector()
-									end,
-									set_pos = function(p41, p42, p43)
-										-- upvalues: v48 (copy)
-										if type(p42) ~= "number" then
-											p41.pos = p42
-											p41.item:set(v48({
-												x = p41.pos.x,
-												y = p41.pos.y
-											}))
-										else
-											if p43 ~= "x" then
-												if p43 == "y" then
-													p41.pos.y = p42
-												end
-											else
-												p41.pos.x = p42
-											end
-
-											p41.item:set(v48({
-												x = p41.pos.x,
-												y = p41.pos.y
-											}))
-										end
-
-										return p41
-									end,
-									set_size = function(p44, p45, p46)
-										if type(p45) ~= "number" then
-											p44.size = p45
-										elseif p46 ~= "x" then
-											if p46 == "y" then
-												p44.size.y = p45
-											end
-										else
-											p44.size.x = p45
-										end
-
-										return p44
-									end,
-									set_min = function(p47, p48)
-										p47.min = p48
-
-										return p47
-									end,
-									set_max = function(p49, p50)
-										p49.max = p50
-
-										return p49
-									end,
-									set_rules = function(p51, p52)
-										p51.rules = p52
-
-										return p51
-									end,
-									update = function(p53, p54)
-										-- upvalues: v47 (copy), v49 (copy), t11 (copy), u44 (ref), u43 (ref), smoothy (copy), v28 (copy), v50 (copy), v48 (copy)
-										if not p54 then
-											if p53.is_active then
-												p53.is_hovered = v49(t11.pos, p53.pos, p53.size)
-												p53.in_dragging = false
-
-												if p53.is_hovered then
-													u44 = p53
-												end
-
-												if p53.is_hovered and t11.clicked then
-													u43 = p53
-													p53.offset = p53.pos - t11.pos
-												end
-
-												local v482 = p53.offset and t11.pos + p53.offset or p53.pos
-												local t12 = {}
-												local v484 = p53.pos + p53.size * 0.5
-												local v485 = v482 + p53.size * 0.5
-												local v486 = common.is_button_down(162)
-
-												for i, v in ipairs(p53.rules) do
-													local pos = v.pos
-													local end_pos = v.end_pos
-													local horizontal = v.horizontal
-													local v492 = p53.animations[i] or (function()
-														-- upvalues: p53 (copy), i (copy), smoothy (copy)
-														p53.animations[i] = smoothy.new(0)
-
-														return p53.animations[i]
-													end)()
-													local v493 = horizontal and "x" or "y"
-													local v494 = math.abs(v485[v493] - pos[v493])
-
-													if p53 == u43 and not v486 and v494 < 8 then
-														t12[v493] = pos[v493] - p53.size[v493] * 0.5
-													end
-
-													local v495 = math.abs(v484[v493] - pos[v493])
-													local n4
-
-													if p53 ~= u43 or v486 then
-														n4 = 0
-													else
-														n4 = v495 < 10 and 120 or 60
-													end
-
-													local v497 = v492(0.05, n4)
-													local v498 = horizontal and vector(pos.x, end_pos and pos.y or 0) or vector(end_pos and pos.x or 0, pos.y)
-													local v499 = horizontal and vector(pos.x + 1, end_pos and end_pos.y or v28.y) or vector(end_pos and end_pos.x or v28.x, pos.y + 1)
-
-													render.rect(v498, v499, color(255, v497))
-												end
-
-												if p53 == u43 then
-													local v500 = vector(t12.x or v482.x, t12.y or v482.y)
-													local min = p53.min
-													local max = p53.max
-
-													if p53.is_centered then
-														min = p53.min - p53.size * 0.5
-														max = p53.max - p53.size * 0.5
-													end
-
-													local v503 = v50(min, vector(0, 0), v28 - p53.size)
-													local v504 = v50(max, vector(0, 0), v28 - p53.size)
-													local v505 = v50(v500, v503, v504)
-
-													if p53.on_dragging then
-														p53:on_dragging()
-													end
-
-													p53.in_dragging = true
-													p53:set_pos(v505)
-												end
-
-												p53.item:set(v48({
-													x = p53.pos.x,
-													y = p53.pos.y
-												}))
-
-												return p53
-											end
-
-											return
-										end
-
-										local v506 = v47(p53.item:get())
-
-										if v506 then
-											if v506.x then
-												p53:set_pos(v506.x, "x")
-											end
-
-											if v506.y then
-												p53:set_pos(v506.y, "y")
-											end
-										end
-
-										return p53
-									end,
-									render = function(p55)
-										-- upvalues: u43 (ref), v28 (copy)
-										local pos = p55.pos
-										local hover = p55.animations.hover
-										local n5
-
-										if not p55.is_active then
-											n5 = 0
-										elseif not p55.is_hovered then
-											n5 = 0
-										else
-											n5 = common.is_button_down(1) and 0.4 or 0.2
-										end
-
-										local v511 = hover(0.05, n5) * ui.get_alpha()
-
-										if v511 > 0 then
-											render.rect(pos - 1, pos + p55.size + 1, color(255, 170 * v511), 4)
-										end
-
-										local v512 = p55.animations.border(0.05, p55.is_active and (p55.render_border and p55 == u43) and 1 or 0) * ui.get_alpha()
-
-										if v512 > 0 then
-											render.rect_outline(p55.min, p55.max + p55.size, color(255, 127 * v512), 1, 4)
-										end
-
-										if not (p55.pos < vector(0, 0)) then
-											if p55.pos > v28 - p55.size then
-												p55:set_pos(v28 - p55.size)
-											end
-										else
-											p55:set_pos(vector(0, 0))
-										end
-
-										if p55.render_callback then
-											p55:render_callback()
-										end
-									end
-								}
-
-								t13.__index = t13
-								t9.items = {}
-								t9.list = t10
-
-								function t9.new(p56)
-									-- upvalues: v45 (copy), v28 (copy), smoothy (copy), t9 (copy), t13 (copy), t10 (copy)
-									local t14 = {
-										render_border = false,
-										is_hovered = false,
-										is_centered = true,
-										is_dragging = false,
-										is_active = true,
-										name = p56,
-										item = v45:value(p56, ""),
-										offset = vector(0, 0),
-										pos = vector(0, 0),
-										size = vector(0, 0),
-										min = vector(0, 0),
-										max = vector(v28.x, v28.y),
-										rules = {},
-										animations = {
-											rulers = {},
-											border = smoothy.new(0),
-											hover = smoothy.new(0)
-										}
-									}
-
-									table.insert(t9.items, t14.item)
-									setmetatable(t14, t13)
-									table.insert(t10, t14)
-
-									return t14
-								end
-
-								events.render(function()
-									-- upvalues: t11 (copy), u44 (ref), u43 (ref), v46 (copy), t9 (copy), v28 (copy), t10 (copy)
-									t11.update()
-									u44 = nil
-
-									if not t11.down then
-										if u43 and u43.on_release then
-											u43:on_release()
-										end
-
-										u43 = nil
-									end
-
-									v46:update(0.075, u43 ~= nil and t9.background and 1 or 0)
-
-									if v46.value > 0 then
-										render.rect(vector(), v28, color(0, 75 * v46.value))
-										render.blur(vector(), v28, 1, v46.value)
-									end
-
-									for i = #t10, 1, -1 do
-										local v516 = t10[i]
-
-										if ui.get_alpha() > 0 then
-											v516:update()
-										end
-
-										v516:render()
-									end
-								end)
-								u37.mouse_input(function(_)
-									-- upvalues: u44 (ref), u43 (ref)
-									if not u44 and not u43 then
-										return
-									end
-
-									return ui.get_alpha() == 0
-								end)
-							end
-
-							t15 = {}
-
-							local function v54(p58)
-								local v519 = entity.get_player_resource()
-
-								if v519 ~= nil then
-									vector()
-									vector()
-
-									local m_bombsiteCenterA = v519.m_bombsiteCenterA
-									local m_bombsiteCenterB = v519.m_bombsiteCenterB
-
-									return p58:dist(m_bombsiteCenterA) < p58:dist(m_bombsiteCenterB) and "A" or "B"
-								end
-
-								return "?"
-							end
-
-							local n6 = 450.7
-							local n7 = 75.68
-							local n8 = 789.2
-
-							local function v58(p59, p60)
-								-- upvalues: n7 (copy), n8 (copy), n6 (copy)
-								local v524 = (p59 - n7) / n8
-								local v525 = n6 * math.exp(-v524 * v524)
-
-								if p60 > 0 then
-									local n9 = 0.5
-									local v527 = v525 * 0.5
-
-									if p60 < (v525 - v527) * n9 then
-										v527 = v525 - p60 * (1 / n9)
-									end
-
-									v525 = v527
-								end
-
-								return math.max(math.floor(v525 + 0.5), 0)
-							end
-
-							function t15.get_damage(_, p62, p63)
-								-- upvalues: v58 (copy)
-								if p62 ~= nil and p63 ~= nil then
-									local m_ArmorValue = p62.m_ArmorValue
-									local v532 = p62:get_eye_position()
-									local v533 = p63:get_origin():dist(v532)
-
-									return v58(v533, m_ArmorValue)
-								end
-
-								return -1
-							end
-
-							local t16 = {
-								time = 0,
-								remaining = 0,
-								site = "?"
-							}
-
-							u37.net_update_start:set(function()
-								-- upvalues: t16 (copy), v54 (copy)
-								local v534 = t16
-								local v535 = entity.get_entities("CC4", true)[1]
-
-								if v535 ~= nil and v535.m_bStartedArming ~= false then
-									v534.time = v535.m_fArmedTime
-									v534.remaining = (v534.time - globals.curtime) / 3
-									v534.site = v54(v535:get_origin())
-
-									return
-								end
-
-								v534.time = 0
-								v534.remaining = 0
-								v534.site = "?"
-							end)
-
-							local t17 = {
-								site = "?",
-								time = 0,
-								defuser = nil,
-								defuse_length = 0,
-								defuse_countdown = 0,
-								defuse_remaining = 0
-							}
-
-							u37.net_update_start:set(function()
-								-- upvalues: t17 (copy), v54 (copy)
-								local v536 = t17
-								local v537 = entity.get_entities("CPlantedC4", true)[1]
-
-								v536.site = "?"
-								v536.time = 0
-								v536.defuse_remaining = 0
-
-								if v537 ~= nil and v537.m_bBombTicking ~= false then
-									v536.site = v54(v537:get_origin())
-									v536.time = v537.m_flC4Blow
-									v536.is_defused = v537.m_bBombDefused
-
-									if not v536.is_defused then
-										local m_hBombDefuser = v537.m_hBombDefuser
-
-										if m_hBombDefuser ~= nil then
-											v536.defuser = m_hBombDefuser
-											v536.defuse_length = v537.m_flDefuseLength
-											v536.defuse_countdown = v537.m_flDefuseCountDown
-											v536.defuse_remaining = math.clamp((v536.defuse_countdown - globals.curtime) / v536.defuse_length, 0, 1)
-										end
-									end
-
-									return
-								end
-							end)
-							t15.planted = t17
-							t15.planting = t16
-							t18 = {
-								ragebot = {
-									dormant_aimbot = pui.find("Aimbot", "Ragebot", "Main", "Enabled", "Dormant Aimbot"),
-									hide_shots = pui.find("Aimbot", "Ragebot", "Main", "Hide Shots", {
-										options = "Options"
-									}),
-									double_tap = pui.find("Aimbot", "Ragebot", "Main", "Double Tap", {
-										lag_options = "Lag Options"
-									}),
-									safety = {
-										safe_points = pui.find("Aimbot", "Ragebot", "Safety", "Safe Points"),
-										body_aim = pui.find("Aimbot", "Ragebot", "Safety", "Body Aim")
-									}
-								},
-								anti_aim = {
-									angles = {
-										pitch = pui.find("Aimbot", "Anti Aim", "Angles", "Pitch"),
-										yaw = pui.find("Aimbot", "Anti Aim", "Angles", "Yaw", {
-											base = "Base",
-											avoid_backstab = "Avoid Backstab",
-											hidden = "Hidden",
-											offset = "Offset"
-										}),
-										yaw_modifier = pui.find("Aimbot", "Anti Aim", "Angles", "Yaw Modifier", {
-											offset = "Offset"
-										}),
-										body_yaw = pui.find("Aimbot", "Anti Aim", "Angles", "Body Yaw", {
-											options = "Options",
-											inverter = "Inverter",
-											freestanding = "Freestanding",
-											right_limit = "Right Limit",
-											left_limit = "Left Limit"
-										}),
-										freestanding = pui.find("Aimbot", "Anti Aim", "Angles", "Freestanding", {
-											body = "Body Freestanding",
-											disable_yaw_modifiers = "Disable Yaw Modifiers"
-										})
-									},
-									fake_lag = {
-										enabled = pui.find("Aimbot", "Anti Aim", "Fake Lag", "Enabled"),
-										limit = pui.find("Aimbot", "Anti Aim", "Fake Lag", "Limit"),
-										variability = pui.find("Aimbot", "Anti Aim", "Fake Lag", "Variability")
-									},
-									other = {
-										fake_duck = pui.find("Aimbot", "Anti Aim", "Misc", "Fake Duck"),
-										slow_walk = pui.find("Aimbot", "Anti Aim", "Misc", "Slow Walk"),
-										leg_movement = pui.find("Aimbot", "Anti Aim", "Misc", "Leg Movement")
-									}
-								},
-								world = {
-									main = {
-										override_zoom = pui.find("Visuals", "World", "Main", "Override Zoom", {
-											scope_overlay = "Scope Overlay"
-										})
-									}
-								},
-								misc = {
-									other = {
-										windows = pui.find("Miscellaneous", "Main", "Other", "Windows"),
-										fake_latency = pui.find("Miscellaneous", "Main", "Other", "Fake Latency")
-									},
-									in_game = {
-										clan_tag = pui.find("Miscellaneous", "Main", "In-Game", "Clan Tag"),
-										shared_features = pui.find("Miscellaneous", "Main", "In-Game", "Shared Features")
-									}
-								}
-							}
-
-							function t18.is_slow_motion()
-								-- upvalues: t18 (copy)
-								return t18.anti_aim.other.slow_walk:get() or t18.anti_aim.other.slow_walk:get_override()
-							end
-
-							t19 = {}
-
-							local n10 = 3.63
-							local n11 = 0.45
-							local n12 = 0
-							local n13 = 0
-
-							local function v67(p64)
-								-- upvalues: normalize_yaw (copy)
-								return normalize_yaw(p64.eye_yaw - p64.abs_yaw)
-							end
-
-							t19.flags = 0
-							t19.packets = 0
-							t19.body_yaw = 0
-							t19.duck_amount = 0
-							t19.movetype = 0
-							t19.velocity = 0
-							t19.is_frozen = false
-							t19.is_onground = false
-							t19.is_crouched = false
-							t19.is_moving = false
-							t19.is_landing = false
-							t19.is_airborne = false
-							t19.in_scoreboard = false
-
-							function t19.setup_command(_)
-								-- upvalues: n12 (ref)
-								local v541 = entity.get_local_player()
-
-								if v541 then
-									n12 = v541.m_fFlags
-
-									return
-								end
-							end
-							function t19.run_command(_)
-								-- upvalues: n13 (ref)
-								local v543 = entity.get_local_player()
-
-								if v543 then
-									n13 = v543.m_fFlags
-
-									return
-								end
-							end
-							function t19.net_update_end()
-								-- upvalues: t19 (copy), v67 (copy), t4 (copy), n11 (copy), n10 (copy), n12 (ref), n13 (ref)
-								local v544 = entity.get_local_player()
-
-								if v544 then
-									local v545 = v544:get_anim_state()
-
-									if v545 then
-										local m_fFlags = v544.m_fFlags
-										local m_MoveType = v544.m_MoveType
-										local m_flDuckAmount = v544.m_flDuckAmount
-
-										t19.flags = m_fFlags
-										t19.movetype = m_MoveType
-										t19.velocity = v545.velocity
-
-										if globals.choked_commands == 0 then
-											t19.body_yaw = v67(v545)
-											t19.duck_amount = m_flDuckAmount
-										end
-
-										t19.is_frozen = bit.band(m_fFlags, t4.FL_FROZEN) ~= 0
-										t19.is_onground = v545.on_ground
-										t19.is_crouched = not (t19.duck_amount <= n11)
-										t19.is_moving = not (t19.velocity <= vector(n10, n10, n10))
-										t19.is_landing = v545.landing
-										t19.is_airborne = bit.band(n12, n13, t4.FL_ONGROUND) == 0
-
-										return
-									end
-
-									return
-								end
-							end
-							function t19.createmove(p67)
-								-- upvalues: t19 (copy)
-								if globals.choked_commands == 0 then
-									t19.packets = t19.packets + 1
-								end
-
-								t19.in_scoreboard = p67.in_score
-							end
-						end
-
-						pui.colors.accent = color("#7396FFFF")
-						pui.colors.hit = color("#7396FFFF")
-						pui.colors.miss = color("#FF7373FF")
-
-						local t20 = {}
-
-						do
-							local v69 = true
-							local s3 = "ui/beepclear.wav"
-							local s4 = "resource/warning.wav"
-							local s5 = "ui/menu_back.wav"
-							local playvol = cvar.playvol
-							local t21 = {
-								warning = "\aFFFF32FF",
-								error = "\aFF3232FF",
-								info = "\a7f7fFFFF"
-							}
-
-							local function v75(p68, p69, p70)
-								-- upvalues: v69 (copy), playvol (copy), t21 (copy)
-								if v69 then
-									if p70 then
-										playvol:call(p70, 1)
-									end
-
-									print_raw(string.format("%s[%s]\aDEFAULT %s", t21[p68], p68, p69))
-									print_dev(p69)
-
-									return
-								end
-							end
-
-							function t20.info(p71)
-								-- upvalues: v75 (copy), s3 (copy)
-								v75("info", p71, s3)
-							end
-							function t20.warning(p72)
-								-- upvalues: v75 (copy), s4 (copy)
-								v75("warning", p72, s4)
-							end
-							function t20.error(p73)
-								-- upvalues: v75 (copy), s5 (copy)
-								v75("error", p73, s5)
-							end
-
-							t22 = {}
-
-							local s6 = "NEXUS::USERDATA"
-							local u78 = db[s6]
-
-							if not u78 then
-								t20.warning("no nexus userdata found, creating new one")
-								u78 = {}
-							end
-
-							if not u78.configurations then
-								u78.configurations = {}
-							end
-
-							if not u78.time_spent then
-								u78.time_spent = 0
-							end
-
-							if not u78.kills then
-								u78.kills = 0
-							end
-
-							if not u78.misses then
-								u78.misses = 0
-							end
-
-							events.player_death:set(function(p74)
-								-- upvalues: t22 (ref)
-								local v557 = entity.get_local_player()
-								local v558 = entity.get(p74.userid, true)
-
-								if not v558:is_bot() then
-									if v557 == entity.get(p74.attacker, true) and v557 ~= v558 then
-										t22.kills = t22.kills + 1
-									end
-
-									return
-								end
-							end)
-							events.aim_ack:set(function(p75)
-								-- upvalues: t22 (ref)
-								if p75.state then
-									if not p75.target:is_bot() then
-										t22.misses = t22.misses + 1
-
-										return
-									end
-
-									return
-								end
-							end)
-							events.shutdown(function()
-								-- upvalues: s6 (copy), u78 (ref)
-								db[s6] = u78
-							end)
-							t22 = u78
-						end
-
-						t23 = {}
-
-						local s7 = "nexus::cfg"
-						local t24 = {}
-						local t25 = {
-							[1] = "nexus::cfg::g6ZhdXRob3Klc3F3YXSkbmFtZadEZWZhdWx0p2NvbnRlbnSCq2FudGlfYWltYm90hKdnZW5lcmFshqptYW51YWxfeWF3qERpc2FibGVkq35tYW51YWxfeWF3gah5YXdfYmFzZapMb2NhbCBWaWV3rmF2b2lkX2JhY2tzdGFiw6l+ZWRnZV95YXeBqHdoaWxlX2ZkwqhlZGdlX3lhd8KsZnJlZXN0YW5kaW5nwq5zdGF0ZV9zZWxlY3RvcginYnVpbGRlcpiJqG92ZXJyaWRlw6d+ZGVzeW5jg6RsZWZ0PKVyaWdodDysZnJlZXN0YW5kaW5no09mZql+bW9kaWZpZXKCpHdheXMDpm9mZnNldACpZGVmZW5zaXZlwqhtb2RpZmllcqhEaXNhYmxlZKZkZXN5bmPDqn5kZWZlbnNpdmWCpXBpdGNopERvd26jeWF3qERpc2FibGVko3lhd6kxODDCsCBML1Kkfnlhd4akbGVmdOqmb2Zmc2V0AKlyYW5kb21pemUAq3ZhcmlhYmlsaXR5NKVyaWdodCylZGVsYXkIiahvdmVycmlkZcOnfmRlc3luY4OkbGVmdDylcmlnaHQ8rGZyZWVzdGFuZGluZ6NPZmapfm1vZGlmaWVygqR3YXlzA6ZvZmZzZXQAqWRlZmVuc2l2ZcKobW9kaWZpZXKoRGlzYWJsZWSmZGVzeW5jw6p+ZGVmZW5zaXZlgqVwaXRjaKhEaXNhYmxlZKN5YXeoRGlzYWJsZWSjeWF3qTE4MMKwIEwvUqR+eWF3hqRsZWZ066ZvZmZzZXQAqXJhbmRvbWl6ZRqrdmFyaWFiaWxpdHkjpXJpZ2h0KaVkZWxheQKJqG92ZXJyaWRlw6d+ZGVzeW5jg6RsZWZ0PKVyaWdodDysZnJlZXN0YW5kaW5no09mZql+bW9kaWZpZXKCpHdheXMDpm9mZnNldACpZGVmZW5zaXZlwqhtb2RpZmllcqhEaXNhYmxlZKZkZXN5bmPDqn5kZWZlbnNpdmWCpXBpdGNoqERpc2FibGVko3lhd6hEaXNhYmxlZKN5YXepMTgwwrAgTC9SpH55YXeGpGxlZnTkpm9mZnNldACpcmFuZG9taXplEKt2YXJpYWJpbGl0eRKlcmlnaHQipWRlbGF5A4mob3ZlcnJpZGXDp35kZXN5bmODpGxlZnQ3pXJpZ2h0PKxmcmVlc3RhbmRpbmejT2ZmqX5tb2RpZmllcoKkd2F5cwOmb2Zmc2V0AKlkZWZlbnNpdmXCqG1vZGlmaWVyqERpc2FibGVkpmRlc3luY8OqfmRlZmVuc2l2ZYKlcGl0Y2ioRGlzYWJsZWSjeWF3qERpc2FibGVko3lhd6kxODDCsCBML1Kkfnlhd4akbGVmdNDXpm9mZnNldACpcmFuZG9taXplFat2YXJpYWJpbGl0eRKlcmlnaHQppWRlbGF5BYmob3ZlcnJpZGXDp35kZXN5bmODpGxlZnQ8pXJpZ2h0PKxmcmVlc3RhbmRpbmejT2ZmqX5tb2RpZmllcoKkd2F5cwOmb2Zmc2V0AKlkZWZlbnNpdmXCqG1vZGlmaWVyqERpc2FibGVkpmRlc3luY8OqfmRlZmVuc2l2ZYKlcGl0Y2ioRGlzYWJsZWSjeWF3qERpc2FibGVko3lhd6kxODDCsCBML1Kkfnlhd4akbGVmdOumb2Zmc2V0zLSpcmFuZG9taXplEqt2YXJpYWJpbGl0eROlcmlnaHQppWRlbGF5BImob3ZlcnJpZGXDp35kZXN5bmODpGxlZnQ8pXJpZ2h0PKxmcmVlc3RhbmRpbmejT2ZmqX5tb2RpZmllcoKkd2F5cwOmb2Zmc2V0AKlkZWZlbnNpdmXCqG1vZGlmaWVyqERpc2FibGVkpmRlc3luY8OqfmRlZmVuc2l2ZYKlcGl0Y2ioRGlzYWJsZWSjeWF3qERpc2FibGVko3lhd6kxODDCsCBML1Kkfnlhd4akbGVmdOumb2Zmc2V0AKlyYW5kb21pemUQq3ZhcmlhYmlsaXR5FaVyaWdodCmlZGVsYXkDiahvdmVycmlkZcOnfmRlc3luY4OkbGVmdDylcmlnaHQ8rGZyZWVzdGFuZGluZ6NPZmapfm1vZGlmaWVygqR3YXlzA6ZvZmZzZXQAqWRlZmVuc2l2ZcKobW9kaWZpZXKoRGlzYWJsZWSmZGVzeW5jw6p+ZGVmZW5zaXZlgqVwaXRjaKhEaXNhYmxlZKN5YXeoRGlzYWJsZWSjeWF3qTE4MMKwIEwvUqR+eWF3hqRsZWZ05KZvZmZzZXQAqXJhbmRvbWl6ZRCrdmFyaWFiaWxpdHkSpXJpZ2h0IqVkZWxheQOJqG92ZXJyaWRlw6d+ZGVzeW5jg6RsZWZ0PKVyaWdodDysZnJlZXN0YW5kaW5no09mZql+bW9kaWZpZXKCpHdheXMDpm9mZnNldACpZGVmZW5zaXZlwqhtb2RpZmllcqhEaXNhYmxlZKZkZXN5bmPDqn5kZWZlbnNpdmWCpXBpdGNoqERpc2FibGVko3lhd6hEaXNhYmxlZKN5YXepMTgwwrAgTC9SpH55YXeGpGxlZnTkpm9mZnNldACpcmFuZG9taXplFat2YXJpYWJpbGl0eTWlcmlnaHQspWRlbGF5BqVvdGhlcoSpZGlzYWJsZXJzgqhub19lbmVtecKmd2FybXVwwqp+ZGVmZW5zaXZlgbpjb21wYXRpYmxlX3dpdGhfaGlkZV9zaG90c8OpZGVmZW5zaXZlr0ZvcmNlIERlZmVuc2l2ZapzdGF0aWNfeWF3kqpNYW51YWwgWWF3oX6oc2V0dGluZ3OIpHJhZ2WHpGxvZ3PDpX5sb2dzgqdkaXNwbGF5lKZTY3JlZW6mRXZlbnRzp0NvbnNvbGWhfqNjbHKTo0hpdKkjOUFBREU1RkahfqpoaWRkZW5fdGFwwq9+ZG9ybWFudF9haW1ib3SEqmF1dG9fc2NvcGXDqGFjY3VyYWN5S6ZkYW1hZ2UBqGhpdGJveGVzlKRIZWFkpUNoZXN0p1N0b21hY2ihfqx+cGVla19hc3Npc3SBqWJlaGF2aW9yc5WqUXVpY2sgUGVla6lFZGdlIFN0b3CyRXh0ZW5kZWQgQmFja3RyYWNrrEZyZWVzdGFuZGluZ6F+q3BlZWtfYXNzaXN0wq5kb3JtYW50X2FpbWJvdMKoZmVhdHVyZXOGsX5ncmVuYWRlX2ZlYXR1cmVzhal0aHJvd19maXjDqnN1cGVyX3Rvc3PDp21vbG90b3bCpmRhbWFnZQGsYXV0b19yZWxlYXNlwqt+Z2FtZV9mb2N1c4KlZmxhc2jDpWZvY3VzwqtmYXN0X2xhZGRlcsOqZ2FtZV9mb2N1c8OwZ3JlbmFkZV9mZWF0dXJlc8Oubm9fZmFsbF9kYW1hZ2XCpW90aGVyhKlmYWtlX2R1Y2uTrFVubG9jayBzcGVlZKtGcmVlemUgdGltZaF+qWVkZ2Vfc3RvcMKudW5sb2NrX2xhdGVuY3nDrWFpcl9jb2xsaXNpb27CqmluZGljYXRvcnOFsHNjcmVlbl9pbmRpY2F0b3LDsGRhbWFnZV9pbmRpY2F0b3LDrW1hbnVhbF9hcnJvd3PDsX5kYW1hZ2VfaW5kaWNhdG9ygqVzbWFsbMKoYW5pbWF0ZWTDrn5tYW51YWxfYXJyb3dzgaVzdHlsZaZNb2Rlcm6nd2lkZ2V0c4WwdmVsb2NpdHlfd2FybmluZ8Kpd2F0ZXJtYXJrw6hrZXliaW5kc8Oqc3BlY3RhdG9yc8KqfndhdGVybWFya4KmZmllbGRzkaF+qHVzZXJuYW1loKdpbl9nYW1liLBza2VldF9pbmRpY2F0b3Jzw6l2aWV3bW9kZWzDqn52aWV3bW9kZWyEoXj2o2Zvds0CbKF54qF64q1+YXNwZWN0X3JhdGlvgahldmFsdWF0ZXutfmN1c3RvbV9zY29wZYSmb2Zmc2V0CqZsZW5ndGhkqGludmVydGVywqkqaW52ZXJ0ZXKpIzk3OTc5N0ZGrGFzcGVjdF9yYXRpb8OsY3VzdG9tX3Njb3Blw7F+c2tlZXRfaW5kaWNhdG9yc4Goc2VsZWN0ZWSYAQIDBAUGB6F+pWNhY2hlgqhwb3NfeF93bQCoYWxpZ25fd20CpXN0eWxlg6RnbG93w6ZhY2NlbnSpI0M5QzdFQTgypGJsdXLD::nexus::cfg"
-						}
-
-						local function v83(p76, p77, p78)
-							return {
-								name = p77,
-								author = p76,
-								content = p78
-							}
-						end
-						local function v84(p79)
-							-- upvalues: base64 (copy), s7 (copy)
-							local v564 = msgpack.pack(p79)
-							local v565 = base64.encode(v564)
-
-							return table.concat({
-								[1] = s7,
-								[2] = v565,
-								[3] = s7
-							}, "::")
-						end
-						local function v85(p80)
-							-- upvalues: s7 (copy), base64 (copy)
-							local v567 = p80:match(s7 .. "::(.+)::" .. s7)
-
-							if v567 then
-								local v568 = base64.decode(v567)
-
-								return (msgpack.unpack(v568))
-							end
-
-							return nil
-						end
-						local function v86(p81)
-							-- upvalues: t25 (copy), v85 (copy), t24 (ref)
-							for _, v in ipairs(t25) do
-								local ok, result = pcall(v85, v)
-
-								if ok and result and p81 == result.name then
-									return v, -2
-								end
-							end
-
-							for i = #t24, 1, -1 do
-								local v575 = t24[i]
-
-								if p81 == v85(v575).name then
-									return v575, i
-								end
-							end
-
-							return nil, -1
-						end
-
-						function t23.save(p82)
-							-- upvalues: t20 (copy), v86 (copy), v83 (copy), pui (copy), v84 (copy), t24 (ref), t22 (ref), t25 (copy)
-							local v577 = p82:match("^%s*(.*%S)%s*$") or ""
-
-							if v577 ~= "" then
-								local v578, v579 = v86(v577)
-
-								if v579 ~= -2 then
-									local v580 = v83(common.get_username(), v577, pui.save())
-									local v581 = v84(v580)
-
-									if v578 ~= nil then
-										t24[v579] = v581
-									else
-										table.insert(t24, v581)
-										v579 = #t24
-									end
-
-									t22.configurations = t24
-									t20.info("configuration saved successfully")
-
-									return #t25 + v579
-								end
-
-								t20.error("cannot modify pinned configuration")
-
-								return false
-							end
-
-							t20.error("configuration name cannot be empty")
-
-							return false
-						end
-						function t23.load(p83)
-							-- upvalues: t20 (copy), t25 (copy), t24 (ref), v85 (copy), pui (copy)
-							if p83 ~= nil and not (p83 <= 0) then
-								local v583
-
-								if not (p83 <= #t25) then
-									v583 = t24[p83 - #t25]
-								else
-									v583 = t25[p83]
-								end
-
-								if v583 ~= nil then
-									local ok, result = pcall(v85, v583)
-
-									if ok then
-										local v586 = result.content or result.settings
-
-										if pcall(pui.load, v586) then
-											t20.info("successfully loaded " .. result.author .. "'s configuration")
-
-											return true
-										end
-
-										t20.error("failed to load configuration data")
-
-										return false
-									end
-
-									t20.error("failed to decode configuration data")
-
-									return false
-								end
-
-								t20.error("configuration not found")
-
-								return false
-							end
-
-							t20.error("invalid configuration index")
-
-							return false
-						end
-						function t23.export(p84)
-							-- upvalues: v83 (copy), pui (copy), v84 (copy), t20 (copy), clipboard (copy)
-							local v588 = v83(common.get_username(), p84, pui.save())
-							local ok, result = pcall(v84, v588)
-
-							if ok then
-								clipboard.set(result)
-								t20.info("successfully copied configuration to clipboard")
-
-								return
-							end
-
-							t20.error("failed to encode configuration data: " .. result)
-						end
-						function t23.import(p85)
-							-- upvalues: v85 (copy), t20 (copy), pui (copy)
-							local ok, result = pcall(v85, p85)
-
-							if ok then
-								local v594 = result.content or result.settings
-
-								if pcall(pui.load, v594) then
-									t20.info("successfully imported " .. result.author .. "'s configuration")
-
-									return
-								end
-
-								t20.error("failed to load configuration data")
-
-								return
-							end
-
-							t20.error("failed to decode configuration data")
-						end
-						function t23.delete(p86)
-							-- upvalues: t25 (copy), t20 (copy), t24 (ref), t22 (ref)
-							if p86 ~= nil and not (p86 <= #t25) then
-								local v596 = p86 - #t25
-
-								if t24[v596] then
-									table.remove(t24, v596)
-									t22.configurations = t24
-									t20.info("successfully deleted configuration")
-
-									return true
-								end
-
-								t20.error("configuration not found")
-
-								return false
-							end
-
-							t20.error("cannot delete pinned configuration")
-
-							return false
-						end
-						function t23.get_list()
-							-- upvalues: t25 (copy), v85 (copy), t24 (ref)
-							local t26 = {}
-
-							for _, v in ipairs(t25) do
-								local ok, result = pcall(v85, v)
-
-								if ok and result then
-									table.insert(t26, result.name .. " \a{Disabled Text}(pinned)")
-								end
-							end
-
-							for i = 1, #t24 do
-								local v603 = v85(t24[i])
-
-								table.insert(t26, v603.name)
-							end
-
-							return t26
-						end
-						function t23.get(p87)
-							-- upvalues: t25 (copy), t24 (ref), v85 (copy)
-							if p87 ~= nil and not (p87 <= 0) then
-								local v605
-
-								if not (p87 <= #t25) then
-									v605 = t24[p87 - #t25]
-								else
-									v605 = t25[p87]
-								end
-
-								if v605 ~= nil then
-									local ok, result = pcall(v85, v605)
-
-									if ok then
-										return result
-									end
-
-									return nil
-								end
-
-								return nil
-							end
-
-							return nil
-						end
-						function t23.update_list()
-							-- upvalues: t24 (ref), t22 (ref)
-							t24 = t22.configurations or {}
-						end
-
-						t23.update_list()
-						u87 = false
-
-						local n14 = 0
-
-						events.createmove(function()
-							-- upvalues: n14 (ref), u87 (ref)
-							local v608 = entity.get_local_player()
-
-							if v608 then
-								local v609 = utils.net_channel()
-								local v610 = v608:get_simulation_time()
-
-								if v610 and v609 then
-									local v611 = to_ticks(v610.current - v610.old)
-
-									if v611 < 0 then
-										n14 = globals.tickcount + math.abs(v611) - to_ticks(v609.latency[0])
-									end
-
-									u87 = not (n14 <= globals.tickcount)
-
-									return
-								end
-
-								return
-							end
-						end)
-						v89 = v1()
-						t27 = {}
-
-						local s8 = "\226\128\138"
-
-						local function v92(p88)
-							-- upvalues: s8 (copy)
-							return string.rep(s8, p88)
-						end
-
-						function v93(p89, p90)
-							-- upvalues: v92 (copy)
-							local v615 = v92(p90)
-
-							return v615 .. p89 .. v615
-						end
-
-						local v94 = false
-						local v95 = false
-
-						n15 = 3
-
-						function v97(p91, p92, p93, p94)
-							-- upvalues: v94 (copy), n15 (ref), v95 (copy), pui (copy), v92 (copy)
-							if v94 then
-								p92 = " \a{Small Text}|\aDEFAULT  " .. p92
-								n15 = 0
-							end
-
-							local v620 = string.format("\f<%s>\r", p91)
-
-							if not p94 then
-								v620 = "\v" .. v620
-							end
-
-							if v95 then
-								p92 = p92:lower()
-							end
-
-							return pui.string(v620 .. v92(p93 + n15 or n15) .. p92)
-						end
-						function v98(p95, p96)
-							-- upvalues: pui (copy), t5 (copy)
-							local v623 = p95:list("")
-
-							local function v624()
-								-- upvalues: v623 (copy), p96 (copy), pui (copy), t5 (copy)
-								local value = v623.value
-								local t28 = {}
-
-								for i, v in ipairs(p96) do
-									local v1332 = value == i and "\v" or "\a{Small Text}"
-
-									t28[i] = pui.string(v1332 .. v)
-								end
-
-								v623:update(t28)
-
-								if ui.get_alpha() > 0 then
-									t5.click()
-								end
-							end
-
-							v623:set_callback(function()
-								-- upvalues: v624 (copy)
-								v624()
-							end, true)
-
-							return v623
-						end
-
-						events.render(function()
-							-- upvalues: v23 (copy), pui (copy), t2 (copy)
-							if ui.get_alpha() ~= 0 then
-								local v625 = ui.get_style()
-								local v626 = v23("nexus  ", globals.realtime, v625["Link Active"], v625["Text Preview"])
-
-								pui.sidebar(v626, t2.icon)
-
-								return
-							end
-						end)
-						t29 = {
-							PROFILE = {
-								ICON = "\f<house>",
-								TABS = {
-									v97("angle-right", "About", 3, true),
-									v97("angle-right", "Configs", 3, true)
-								},
-								SECTIONS = {
-									[1] = {
-										[1] = "tabs",
-										[2] = "##PROFILE"
-									},
-									[2] = {
-										[1] = "notation",
-										[2] = "##NOTATION",
-										[3] = 1
-									},
-									[3] = {
-										[1] = "dashboard",
-										[2] = "##DASHBOARD"
-									},
-									[4] = {
-										[1] = "statistics",
-										[2] = "STATISTICS",
-										[3] = 2
-									},
-									[5] = {
-										[1] = "statistics_2",
-										[2] = "##STATISTICS_2",
-										[3] = 2
-									},
-									[6] = {
-										[1] = "configurations",
-										[2] = "##CONFIGURATIONS"
-									}
-								}
-							},
-							ANTI_AIM = {
-								ICON = "\f<shield-cat>",
-								TABS = {
-									v97("microchip", "General", 3, true),
-									v97("trowel", "Builder", 3, true)
-								},
-								SECTIONS = {
-									[1] = {
-										[1] = "tabs",
-										[2] = "##ANTI_AIM"
-									},
-									[2] = {
-										[1] = "state_selector",
-										[2] = "##STATE_SELECTOR",
-										[3] = 1
-									},
-									[3] = {
-										[1] = "general",
-										[2] = "##GENERAL"
-									},
-									[4] = {
-										[1] = "other",
-										[2] = "##OTHER"
-									},
-									[5] = {
-										[1] = "yaw",
-										[2] = "YAW",
-										[3] = 2
-									},
-									[6] = {
-										[1] = "desync",
-										[2] = "DESYNC",
-										[3] = 2
-									},
-									[7] = {
-										[1] = "defensive",
-										[2] = "DEFENSIVE",
-										[3] = 2
-									}
-								}
-							},
-							SETTINGS = {
-								ICON = "\f<square-sliders>",
-								TABS = {
-									v97("bars-staggered", "Features", 4, true),
-									v97("eye", "Visuals", 3, true),
-									v97("symbols", "Other", 4, true)
-								},
-								SECTIONS = {
-									[1] = {
-										[1] = "tabs",
-										[2] = "##SETTINGS"
-									},
-									[2] = {
-										[1] = "features",
-										[2] = "##FEATURES"
-									},
-									[3] = {
-										[1] = "ragebot",
-										[2] = "##RAGEBOT",
-										[3] = 2
-									},
-									[4] = {
-										[1] = "in_game",
-										[2] = "##IN_GAME",
-										[3] = 1
-									},
-									[5] = {
-										[1] = "style",
-										[2] = "##STYLE",
-										[3] = 2
-									},
-									[6] = {
-										[1] = "indicators",
-										[2] = "##INDICATORS",
-										[3] = 2
-									},
-									[7] = {
-										[1] = "widgets",
-										[2] = "##WIDGETS",
-										[3] = 2
-									},
-									[8] = {
-										[1] = "cache",
-										[2] = "##CACHE"
-									},
-									[9] = {
-										[1] = "other",
-										[2] = "##OTHER"
-									},
-									[10] = {
-										[1] = "shared",
-										[2] = "##SHARED",
-										[3] = 2
-									}
-								}
-							}
-						}
-
-						local PROFILE = t29.PROFILE
-
-						TABS = PROFILE.TABS
-
-						local SECTIONS = PROFILE.SECTIONS
-						local ICON = PROFILE.ICON
-
-						v104 = pui.create(ICON, SECTIONS)
-					end
-
-					local v105 = v98(v104.tabs, TABS)
-					local notation = v104.notation
-					local dashboard = v104.dashboard
-					local statistics = v104.statistics
-					local statistics_2 = v104.statistics_2
-
-					notation:label(v97("wand-magic-sparkles", "We wish you good luck, thank you for using our script!", 5))
-					dashboard:label(v97("circle-user", "User", 6))
-					dashboard:button("\v" .. common.get_username(), nil, true)
-					dashboard:label(v97("brackets-curly", "Branch", 5))
-					dashboard:button("\v" .. t2.branch, nil, true)
-					statistics:label(v97("stopwatch", "Session time", 7))
-
-					local v110 = statistics:button("\v0 Minutes", nil, true)
-
-					statistics:label(v97("clock", "Time spent", 6))
-
-					local v111 = statistics:button("\v0 Minutes", nil, true)
-
-					statistics_2:label(v97("skull", "Kills", 6))
-
-					local v112 = statistics_2:button("\v0", nil, true)
-
-					statistics_2:label(v97("triangle-exclamation", "Misses", 6))
-
-					local v113 = statistics_2:button("\v0", nil, true)
-
-					local function v114(p97)
-						return math.floor(p97 / 3600), (math.floor(p97 / 60))
-					end
-
-					local n16 = 0
-					local u116 = false
-					local u117 = false
-
-					v110:set_callback(function()
-						-- upvalues: u116 (ref), n16 (ref)
-						u116 = not u116
-
-						if n16 < 3600 then
-							u116 = false
-						end
-					end, true)
-					v111:set_callback(function()
-						-- upvalues: u117 (ref), t22 (ref)
-						u117 = not u117
-
-						if t22.time_spent < 3600 then
-							u117 = false
-						end
-					end, true)
-					events.render(function()
-						-- upvalues: n16 (ref), t22 (ref), v114 (copy), u116 (ref), v110 (copy), u117 (ref), v111 (copy), v112 (copy), v113 (copy)
-						local frametime = globals.frametime
-
-						n16 = n16 + frametime
-						t22.time_spent = t22.time_spent + frametime
-
-						if ui.get_alpha() > 0 then
-							local v629, v630 = v114(n16)
-							local v631 = u116 and v629 or v630
-							local v632 = u116 and "Hours" or "Minutes"
-
-							v110:name("\v" .. v631 .. " " .. v632)
-
-							local v633, v634 = v114(t22.time_spent)
-							local v635 = u117 and v633 or v634
-							local v636 = u117 and "Hours" or "Minutes"
-
-							v111:name("\v" .. v635 .. " " .. v636)
-						end
-
-						local v637 = "\v" .. t22.kills
-						local v638 = "\v" .. t22.misses
-
-						if v637 ~= v112 or v638 ~= v113 then
-							v112:name(v637)
-							v113:name(v638)
-						end
-					end)
-					dashboard:depend({
-						[1] = nil,
-						[2] = 1,
-						[1] = v105
-					})
-					statistics:depend({
-						[1] = nil,
-						[2] = 1,
-						[1] = v105
-					})
-					statistics_2:depend({
-						[1] = nil,
-						[2] = 1,
-						[1] = v105
-					})
-					notation:depend({
-						[1] = nil,
-						[2] = 1,
-						[1] = v105
-					})
-
-					local configurations = v104.configurations
-					local v119 = configurations:list("##PRESET_LIST", t23.get_list())
-					local v120 = configurations:input("##PRESET_NAME", "Default")
-
-					configurations:button(v93(v97("download", "Load", 3), 3), function()
-						-- upvalues: t23 (copy), v119 (copy), t9 (copy)
-						t23.load(v119:get())
-
-						for _, v in ipairs(t9.list) do
-							v:update(true)
-						end
-
-						t23.update_list()
-						v119:update(t23.get_list())
-					end, true):tooltip("Click to load the configuration you selected from the list above.\n\n\vNote:\r This will overwrite your current settings with the selected configuration.")
-					configurations:button(v93(v97("floppy-disk", "Save", 3), 3), function()
-						-- upvalues: t23 (copy), v120 (copy), v119 (copy)
-						local v641 = t23.save(v120:get())
-
-						t23.update_list()
-						v119:update(t23.get_list())
-
-						if v641 and v641 > 0 then
-							v119:set(v641)
-						end
-					end, true):tooltip("Click to save your current settings as a new configuration with the name entered above or overwrite the selected configuration.")
-					configurations:button(v93("\aFF3232FF\f<trash>", 3), function()
-						-- upvalues: t23 (copy), v119 (copy)
-						t23.delete(v119:get())
-						t23.update_list()
-						v119:update(t23.get_list())
-					end, true):tooltip("Click to permanently delete the selected configuration.\n\n\vNote:\r This action cannot be undone.")
-					configurations:button(v93("\f<copy>", 3), function()
-						-- upvalues: t23 (copy), v120 (copy)
-						t23.export(v120:get())
-					end, true):tooltip("Click to copy your current settings to clipboard.\n\n\vNote:\r This only copies your active settings, not the settings from the selected configuration.")
-					configurations:button(v93("\f<paste>", 3), function()
-						-- upvalues: t23 (copy), clipboard (copy)
-						t23.import(clipboard.get())
-					end, true):tooltip("Click to apply settings from your clipboard.\n\n\vNote:\r This will update your active settings but will not modify the selected configuration.")
-					v119:set_callback(function(p98)
-						-- upvalues: t23 (copy), v120 (copy)
-						local v643 = p98:get()
-
-						if v643 ~= nil and not (v643 <= 0) then
-							local v644 = t23.get(v643)
-
-							if v644 ~= nil then
-								v120:set(v644.name)
-
-								return
-							end
-
-							return
-						end
-					end)
-					configurations:depend({
-						[1] = nil,
-						[2] = 2,
-						[1] = v105
-					})
-				end
-
-				local t30 = {}
-				local ANTI_AIM = t29.ANTI_AIM
-				local TABS = ANTI_AIM.TABS
-				local SECTIONS = ANTI_AIM.SECTIONS
-				local ICON = ANTI_AIM.ICON
-				local v126 = pui.create(ICON, SECTIONS)
-				local v127 = v98(v126.tabs, TABS)
-
-				t30.general = {}
-
-				local general = t30.general
-				local general2 = v126.general
-
-				general.manual_yaw = general2:combo(v97("arrows-repeat", "Manual Yaw", 3), {
-					[1] = "Disabled",
-					[2] = "Forward",
-					[3] = "Backward",
-					[4] = "Left",
-					[5] = "Right"
-				}, function(p99)
-					-- upvalues: v97 (copy)
-					return {
-						yaw_base = p99:combo(v97("crosshairs", "Yaw Base", 4), {
-							[1] = "Local View",
-							[2] = "At Target"
-						})
-					}
-				end)
-				general.freestanding = general2:switch(v97("arrows-spin", "Freestanding", 3))
-				general.edge_yaw = general2:switch(v97("triangle", "Edge Yaw", 3), false, function(p100)
-					-- upvalues: v97 (copy)
-					return {
-						while_fd = p100:switch(v97("duck", "While Fake Duck", 3), false, "Automatically enables \"Edge Yaw\" on Fake Duck.")
-					}
-				end)
-				general.avoid_backstab = general2:switch(v97("arrows-spin", "Avoid Backstab", 3))
-				general.safe_head = general2:switch(v97("helmet-safety", "Safe Head", 2), false, function(p101)
-					-- upvalues: v97 (copy)
-					return {
-						weapon = p101:listable(v97("gun", "Weapon", 3), {
-							[1] = "Knife",
-							[2] = "Zeus"
-						}),
-						height_difference = p101:slider(v97("line-height", "Height Difference", 3), 0, 35, 20, 1, function(p102)
-							if p102 ~= 0 then
-								if p102 ~= 35 then
-									return p102 .. "u"
-								end
-
-								return "Max"
-							end
-
-							return "N/A"
-						end)
-					}, true
-				end)
-				general.jitter_move = general2:switch(v97("waveform-lines", "Jitter Move", 1), true)
-				general2:depend({
-					[1] = nil,
-					[2] = 1,
-					[1] = v127
-				})
-				t30.other = {}
-
-				local other = t30.other
-				local other2 = v126.other
-
-				other.defensive = other2:label(v97("sparkles", "Defensive", 3), function(p103)
-					-- upvalues: v97 (copy)
-					return {
-						compatible_with_hide_shots = p103:switch(v97("eye-slash", "Compatible with Hide Shots", 3), false, "\v\f<circle-info>  \rRemember it overwrites Hide Shots mode"),
-						conditions = p103:listable("##CONDITIONS", {
-							[1] = "Standing",
-							[2] = "Running",
-							[3] = "Slowwalking",
-							[4] = "Ducking",
-							[5] = "Sneaking",
-							[6] = "In Air",
-							[7] = "In Air & Crouching"
-						})
-					}
-				end)
-				other.disablers = other2:label(v97("lock", "Disablers", 4), function(p104)
-					-- upvalues: v97 (copy)
-					return {
-						warmup = p104:switch(v97("wind", "Warmup", 5)),
-						no_enemy = p104:switch(v97("users-slash", "No Enemy", 3))
-					}
-				end)
-				other.static_yaw = other2:selectable(v97("chart-radar", "Static Yaw", 3), {
-					[1] = "Freestanding",
-					[2] = "Manual Yaw"
-				})
-				other.animation_breaker = other2:switch(v97("person-falling", "Animation Breaker", 4), false, function(p105)
-					-- upvalues: v97 (copy)
-					return {
-						interpolation = p105:slider(v97("wave-square", "Interpolation", 5), 0, 14, 0, 1, function(p106)
-							if p106 ~= 0 then
-								if p106 ~= 9 then
-									if p106 ~= 14 then
-										return p106 .. "t"
-									end
-
-									return "High"
-								end
-
-								return "Medium"
-							end
-
-							return "Default"
-						end),
-						leaning = p105:slider(v97("scale-balanced", "Leaning", 5), 0, 100, 0, 50, function(p107)
-							if p107 ~= 0 then
-								if p107 ~= 100 then
-									return p107 .. "%"
-								end
-
-								return "Maximum"
-							end
-
-							return "Disabled"
-						end),
-						ground = p105:combo(v97("mountain", "Ground", 6), {
-							[1] = "None",
-							[2] = "Follow direction",
-							[3] = "Jitter legs",
-							[4] = "Moon walk",
-							[5] = "Kangaroo"
-						}),
-						air = p105:combo(v97("wind", "Air", 6), {
-							[1] = "None",
-							[2] = "Falling",
-							[3] = "Walking",
-							[4] = "Kangaroo"
-						})
-					}
-				end)
-				other.fakelag_disablers = other2:selectable(v97("align-slash", "FL Disablers", 1), {
-					[1] = "Double Tap",
-					[2] = "Hide Shots",
-					[3] = "Standing"
-				})
-				other2:depend({
-					[1] = nil,
-					[2] = 1,
-					[1] = v127
-				})
-				t30.builder = {}
-
-				local builder = t30.builder
-				local v133 = v98(v126.state_selector, {
-					v97("user", "Default", 7, true),
-					v97("person", "Standing", 8, true),
-					v97("person-running", "Running", 6, true),
-					v97("person-walking", "Slowwalking", 8, true),
-					v97("person-seat", "Ducking", 7, true),
-					v97("wheelchair-move", "Sneaking", 6, true),
-					v97("person-ski-jumping", "In Air", 5, true),
-					v97("person-sledding", "In Air & Crouching", 5, true)
-				})
-
-				for i, v in ipairs(t3) do
-					local t37 = {
-						override = v126.state_selector:switch(v97(v == "Default" and "toggle-on" or "toggle-off", string.format("Override \v%s", v), 5), v == "Default"),
-						yaw = v126.yaw:combo(v97("angle", "Yaw", 6), {
-							[1] = "Default",
-							[2] = "180° L/R"
-						}, function(p108, p109)
-							-- upvalues: v97 (copy)
-							local t31 = {
-								offset = p108:slider(v97("angle", "Offset", 4), -180, 180, 0, 1, "°"),
-								left = p108:slider(v97("left", "Left", 6), -180, 180, 0, 1, "°"),
-								right = p108:slider(v97("right", "Right", 6), -180, 180, 0, 1, "°"),
-								randomize = p108:slider(v97("shuffle", "Randomize", 5), 0, 100, 0, 1, function(p110)
-									return p110 == 0 and "Off" or p110 .. "%"
-								end),
-								delay = p108:slider(v97("clock", "Delay", 5), 1, 20, 1, 1, function(p111)
-									return p111 == 1 and "Off" or p111 .. "t"
-								end),
-								variability = p108:slider(v97("dice", "Variability", 3), 0, 100, 0, 1, function(p112)
-									return p112 == 0 and "Off" or p112 .. "%"
-								end)
-							}
-
-							t31.offset:depend({
-								[1] = nil,
-								[2] = "Default",
-								[1] = p109
-							})
-							t31.left:depend({
-								[1] = nil,
-								[2] = "180° L/R",
-								[1] = p109
-							})
-							t31.right:depend({
-								[1] = nil,
-								[2] = "180° L/R",
-								[1] = p109
-							})
-							t31.delay:depend({
-								[1] = nil,
-								[2] = "180° L/R",
-								[1] = p109
-							})
-							t31.variability:depend({
-								[1] = nil,
-								[2] = "180° L/R",
-								[1] = p109
-							})
-
-							return t31
-						end),
-						modifier = v126.yaw:combo(v97("sparkles", "Modifier", 5), {
-							[1] = "Disabled",
-							[2] = "Center",
-							[3] = "Offset",
-							[4] = "Random",
-							[5] = "Spin",
-							[6] = "X-Way"
-						}, function(_, p114)
-							-- upvalues: v126 (copy), v97 (copy), v133 (copy), i (copy)
-							local t32 = {
-								offset = v126.yaw:slider("  \a4d4d4dff" .. v97("angles-right", "\rOffset", 3, true), -180, 180, 0, 1, "°"),
-								ways = v126.yaw:slider("  \a4d4d4dff" .. v97("angles-right", "\rWays", 3, true), 3, 9, 3, 1, "w")
-							}
-
-							t32.offset:depend({
-								[1] = v133,
-								[2] = i
-							}, {
-								[1] = nil,
-								[2] = "Disabled",
-								[3] = true,
-								[1] = p114
-							})
-							t32.ways:depend({
-								[1] = v133,
-								[2] = i
-							}, {
-								[1] = nil,
-								[2] = "X-Way",
-								[1] = p114
-							})
-
-							return t32
-						end),
-						desync = v126.desync:switch(v97("waveform-lines", "Body Yaw", 3), false, function(_, p116)
-							-- upvalues: v126 (copy), v97 (copy), v133 (copy), i (copy)
-							local t33 = {
-								left = v126.desync:slider("  \a4d4d4dff" .. v97("angles-right", "\rLeft", 3, true), 0, 60, 0, 1, "°"),
-								right = v126.desync:slider("  \a4d4d4dff" .. v97("angles-right", "\rRight", 3, true), 0, 60, 0, 1, "°"),
-								freestanding = v126.desync:combo(v97("split", "Freestanding", 5), {
-									[1] = "Off",
-									[2] = "Peek Fake",
-									[3] = "Peek Real"
-								}),
-								options = v126.desync:label(v97("spa", "Options", 4), function(p117)
-									-- upvalues: v97 (copy)
-									return {
-										avoid_overlap = p117:switch(v97("diagram-venn", "Avoid Overlap", 3)),
-										jitter = p117:switch(v97("tornado", "Jitter", 6)),
-										randomize_jitter = p117:switch(v97("shuffle", "Randomize Jitter", 5)),
-										anti_bruteforce = p117:switch(v97("shield-virus", "Anti Bruteforce", 5))
-									}
-								end)
-							}
-
-							t33.left:depend({
-								[1] = v133,
-								[2] = i
-							}, {
-								[1] = nil,
-								[2] = true,
-								[1] = p116
-							})
-							t33.right:depend({
-								[1] = v133,
-								[2] = i
-							}, {
-								[1] = nil,
-								[2] = true,
-								[1] = p116
-							})
-							t33.freestanding:depend({
-								[1] = v133,
-								[2] = i
-							})
-							t33.options:depend({
-								[1] = v133,
-								[2] = i
-							})
-
-							return t33
-						end),
-						defensive = v126.defensive:switch(v97("bug", "Enable", 5), false, function()
-							-- upvalues: v126 (copy), v97 (copy), v133 (copy), i (copy)
-							local t36 = {
-								pitch = v126.defensive:combo(v97("hat-witch", "Pitch", 4), {
-									[1] = "Disabled",
-									[2] = "Down",
-									[3] = "Up",
-									[4] = "Random",
-									[5] = "Jitter",
-									[6] = "Custom"
-								}, function(p118, p119)
-									-- upvalues: v97 (copy), v133 (copy), i (copy)
-									local t34 = {
-										first = p118:slider(v97("up", "First", 3), -89, 89, 0, 1, "°"),
-										second = p118:slider(v97("down", "Second", 3), -89, 89, 0, 1, "°"),
-										amount = p118:slider(v97("angle", "Offset", 4), -89, 89, 0, 1, "°")
-									}
-
-									t34.amount:depend({
-										[1] = v133,
-										[2] = i
-									}, {
-										[1] = nil,
-										[2] = "Custom",
-										[1] = p119
-									})
-									t34.first:depend({
-										[1] = v133,
-										[2] = i
-									}, {
-										[1] = nil,
-										[2] = "Random",
-										[3] = "Jitter",
-										[1] = p119
-									})
-									t34.second:depend({
-										[1] = v133,
-										[2] = i
-									}, {
-										[1] = nil,
-										[2] = "Random",
-										[3] = "Jitter",
-										[1] = p119
-									})
-
-									return t34
-								end),
-								yaw = v126.defensive:combo(v97("scribble", "Yaw", 5), {
-									[1] = "Disabled",
-									[2] = "Forward",
-									[3] = "Sideways",
-									[4] = "Random",
-									[5] = "Spin",
-									[6] = "Center",
-									[7] = "Custom"
-								}, function(p120, p121)
-									-- upvalues: v97 (copy), v133 (copy), i (copy)
-									local t35 = {
-										speed = p120:slider(v97("gauge", "Speed", 3), 1, 30, 3, 1, "t"),
-										amount = p120:slider(v97("angle", "Offset", 4), -180, 180, 0, 1, "°")
-									}
-
-									t35.speed:depend({
-										[1] = v133,
-										[2] = i
-									}, {
-										[1] = nil,
-										[2] = "Spin",
-										[1] = p121
-									})
-									t35.amount:depend({
-										[1] = v133,
-										[2] = i
-									}, {
-										[1] = nil,
-										[2] = "Custom",
-										[3] = "Center",
-										[1] = p121
-									})
-
-									return t35
-								end)
-							}
-
-							t36.pitch:depend({
-								[1] = v133,
-								[2] = i
-							})
-							t36.yaw:depend({
-								[1] = v133,
-								[2] = i
-							})
-
-							return t36
-						end)
-					}
-
-					builder[i] = t37
-					t37.override:depend({
-						[1] = v133,
-						[2] = i
-					})
-					t37.yaw:depend({
-						[1] = v133,
-						[2] = i
-					})
-					t37.modifier:depend({
-						[1] = v133,
-						[2] = i
-					})
-					t37.desync:depend({
-						[1] = v133,
-						[2] = i
-					})
-					t37.defensive:depend({
-						[1] = v133,
-						[2] = i
-					})
-
-					if v == "Default" then
-						t37.override:disabled(true)
-					end
-
-					t37.override:set_callback(function(p122)
-						-- upvalues: v97 (copy), v (copy)
-						p122:name(v97(p122:get() and "toggle-on" or "toggle-off", string.format("Override \v%s", v), 5))
-					end, true)
-				end
-
-				v133:set_callback(function()
-					-- upvalues: v133 (copy), builder (copy)
-					local v651 = v133:get()
-
-					for k, v in pairs(builder) do
-						v.override:visibility(v651 == k)
-						v.yaw:visibility(v651 == k)
-						v.modifier:visibility(v651 == k)
-						v.desync:visibility(v651 == k)
-						v.defensive:visibility(v651 == k)
-					end
-				end, true)
-				t30.state_selector = v133
-				v126.state_selector:depend({
-					[1] = nil,
-					[2] = 2,
-					[1] = v127
-				})
-				v126.yaw:depend({
-					[1] = nil,
-					[2] = 2,
-					[1] = v127
-				})
-				v126.desync:depend({
-					[1] = nil,
-					[2] = 2,
-					[1] = v127
-				})
-				v126.defensive:depend({
-					[1] = nil,
-					[2] = 2,
-					[1] = v127
-				})
-				t27.anti_aimbot = t30
-				t38 = {}
-
-				local SETTINGS = t29.SETTINGS
-				local TABS2 = SETTINGS.TABS
-				local SECTIONS2 = SETTINGS.SECTIONS
-				local ICON2 = SETTINGS.ICON
-
-				v142 = pui.create(ICON2, SECTIONS2)
-				v143 = v98(v142.tabs, TABS2)
-				t39 = {}
-
-				local style = v142.style
-				local v146 = ui.get_style()
-
-				t39.accent = style:color_picker(v97("palette", "Accent", 5), v146["Link Active"]:alpha_modulate(153))
-				t39.glow = style:switch(v97("sparkles", "Glow", 5), true)
-				t39.blur = style:switch(v97("waveform", "Blur", 3), true)
-				t39.accent:set_callback(function(p123)
-					-- upvalues: pui (copy)
-					pui.accent = p123.value:alpha_modulate(255)
-				end, true)
-				style:depend({
-					[1] = nil,
-					[2] = 2,
-					[1] = v143
-				})
-				t40 = {}
-
-				local widgets = v142.widgets
-
-				t40.watermark = widgets:label(v97("circle-nodes", "Watermark", 5), function(p124)
-					-- upvalues: v97 (copy)
-					return {
-						fields = p124:listable(v97("list", "Fields", 3), {
-							[1] = "User",
-							[2] = "Time",
-							[3] = "Ping"
-						}),
-						username = p124:input(v97("user-pen", "Custom Name", 3))
-					}
-				end)
-				t40.keybinds = widgets:switch(v97("keyboard", "Keybinds", 4))
-				t40.spectators = widgets:switch(v97("eye", "Spectators", 4))
-				t40.velocity_warning = widgets:switch(v97("gauge-high", "Velocity Warning", 5))
-				widgets:depend({
-					[1] = nil,
-					[2] = 2,
-					[1] = v143
-				})
-				t41 = {}
-
-				local indicators = v142.indicators
-
-				t41.screen_indicator = indicators:switch(v97("sparkles", "Screen Indicator", 5), false, function(p125)
-					-- upvalues: v97 (copy)
-					return {
-						glow = p125:switch(v97("sparkles", "Glow", 4), false)
-					}
-				end)
-				t41.manual_arrows = indicators:switch(v97("left-right", "Manual Arrows", 5), false, function(p126)
-					-- upvalues: v97 (copy)
-					return {
-						style = p126:combo(v97("pen-fancy-slash", "Style", 3), {
-							[1] = "Classic",
-							[2] = "Modern"
-						})
-					}, true
-				end)
-				t41.damage_indicator = indicators:switch(v97("burst", "Damage Indicator", 5), false, function(p127)
-					-- upvalues: v97 (copy)
-					return {
-						animated = p127:switch(v97("bars-progress", "Animated", 4), true),
-						small = p127:switch(v97("minimize", "Small", 4), false)
-					}, true
-				end)
-				indicators:depend({
-					[1] = nil,
-					[2] = 2,
-					[1] = v143
-				})
-				t42 = {}
-
-				local in_game = v142.in_game
-
-				t42.custom_scope = in_game:switch(v97("crosshairs", "Custom Scope", 3), false, function(p128)
-					-- upvalues: v97 (copy)
-					return {
-						inverter = p128:switch(v97("palette", "Color", 4), false, color("#9CD1FFFF"), "Inverts color"),
-						offset = p128:slider(v97("droplet", "Offset", 6), 10, 100, 10, 1),
-						length = p128:slider(v97("brush", "Length", 6), 10, 100, 50, 1)
-					}, true
-				end)
-				t42.aspect_ratio = in_game:switch(v97("expand", "Aspect Ratio", 4), false, function(p129)
-					local t43 = {
-						evaluate = p129:slider("", 0, 300, 0, 0.01, function(p130)
-							return ({
-								[0] = "Off",
-								[1.33] = "4:3",
-								[1.5] = "3:2",
-								[1.25] = "5:4",
-								[1.6] = "16:10",
-								[1.78] = "16:9"
-							})[p130 / 100] or nil
-						end)
-					}
-
-					t43.button169 = p129:button("16:9", function()
-						-- upvalues: t43 (copy)
-						t43.evaluate:set(177.77777777777777)
-					end, true)
-					t43.button1610 = p129:button("16:10", function()
-						-- upvalues: t43 (copy)
-						t43.evaluate:set(160)
-					end, true)
-					t43.button32 = p129:button("3:2", function()
-						-- upvalues: t43 (copy)
-						t43.evaluate:set(150)
-					end, true)
-					t43.button43 = p129:button("4:3", function()
-						-- upvalues: t43 (copy)
-						t43.evaluate:set(133.33333333333331)
-					end, true)
-					t43.button54 = p129:button("5:4", function()
-						-- upvalues: t43 (copy)
-						t43.evaluate:set(125)
-					end, true)
-
-					return t43
-				end)
-				t42.viewmodel = in_game:switch(v97("hand", "Viewmodel", 3), false, function(p131)
-					local t44 = {
-						fov = p131:slider("Field of View", 0, 1000, cvar.viewmodel_fov:float() * 10, 0.1),
-						x = p131:slider("X", -100, 100, cvar.viewmodel_offset_x:float() * 10, 0.1),
-						y = p131:slider("Y", -100, 100, cvar.viewmodel_offset_y:float() * 10, 0.1),
-						z = p131:slider("Z", -100, 100, cvar.viewmodel_offset_z:float() * 10, 0.1),
-						opposite_knife_hand = p131:switch("Opposite Knife Hand", false)
-					}
-
-					t44.reset = p131:button("Reset", function()
-						-- upvalues: t44 (copy)
-						t44.fov:set(600)
-						t44.x:set(10)
-						t44.y:set(10)
-						t44.z:set(15)
-					end)
-
-					return t44
-				end)
-				t42.skeet_indicators = in_game:switch(v97("circle", "\a43ff64d9$500\r Indicators", 3), false, function(p132)
-					return {
-						selected = p132:listable("##SELECTED", {
-							[1] = "Safe Points",
-							[2] = "Double Tap",
-							[3] = "Hide Shots",
-							[4] = "Fake Duck",
-							[5] = "Body Aim",
-							[6] = "Minimum Damage",
-							[7] = "Dormant Aimbot",
-							[8] = "Freestanding",
-							[9] = "Fake Latency",
-							[10] = "Bomb Info",
-							[11] = "Hit Rate"
-						})
-					}
-				end)
-				t42.keep_transparency = in_game:switch(v97("face-dotted", "Keep Model Transparency", 3))
-				in_game:depend({
-					[1] = nil,
-					[2] = 2,
-					[1] = v143
-				})
-				t45 = {}
-
-				local features = v142.features
-
-				t45.grenade_features = features:switch(v97("bomb", "Grenade features", 5), false, function(p133)
-					-- upvalues: v97 (copy)
-					return {
-						throw_fix = p133:switch(v97("explosion", "Throw fix", 3), false),
-						super_toss = p133:switch(v97("superpowers", "Super toss", 5), false),
-						auto_release = p133:switch(v97("hand", "Auto release", 4), false),
-						damage = p133:slider(v97("heart-crack", "Damage", 4), 1, 99, 30, nil, "hp"),
-						molotov = p133:switch(v97("fire-flame", "Molotov", 5), false)
-					}
-				end)
-				t45.no_fall_damage = features:switch(v97("person-falling", "No fall damage", 6))
-				t45.fast_ladder = features:switch(v97("water-ladder", "Fast ladder", 4))
-				t45.game_focus = features:switch(v97("gamepad", "Game focus", 3), false, function(p134)
-					-- upvalues: v97 (copy)
-					return {
-						flash = p134:switch(v97("bolt", "Flash window", 5), true),
-						focus = p134:switch(v97("expand", "Auto focus", 4), false)
-					}
-				end)
-				features:depend({
-					[1] = nil,
-					[2] = 3,
-					[1] = v143
-				})
-				t46 = {}
-
-				local shared = v142.shared
-
-				t46.icon = shared:switch(v97("rectangle-ad", "Shared icon", 4), false, "\n\affffffff\f<atom>\r - User\n\n\aFFC78FFF\f<atom>\r - Developer")
-				shared:depend({
-					[1] = nil,
-					[2] = 3,
-					[1] = v143
-				})
-				t47 = {}
-
-				local other3 = v142.other
-
-				t47.fake_duck = other3:selectable(v97("duck", "Fake duck", 6), {
-					[1] = "Unlock speed",
-					[2] = "Freeze time"
-				})
-				t47.air_collision = other3:switch(v97("wind", "Air collision", 6))
-				t47.unlock_latency = other3:switch(v97("timer", "Unlock latency", 6))
-				t47.edge_stop = other3:switch(v97("arrow-down-up-lock", "Edge Stop", 4))
-				other3:depend({
-					[1] = nil,
-					[2] = 3,
-					[1] = v143
-				})
-				t48 = {}
-
-				local cache = v142.cache
-
-				t48.align_wm = cache:value("##watermark align", 2)
-				t48.pos_x_wm = cache:value("##watermark x pos", 0)
-			end
-
-			local t49 = {}
-			local ragebot = v142.ragebot
-
-			t49.peek_assist = ragebot:switch(v97("circle-dashed", "Peek Assist", 4), false, function(p135)
-				-- upvalues: v97 (copy)
-				return {
-					behaviors = p135:selectable(v97("sliders-simple", "Behaviors", 3), {
-						[1] = "Quick Peek",
-						[2] = "Edge Stop",
-						[3] = "Extended Backtrack",
-						[4] = "Freestanding"
-					})
-				}
-			end)
-			t49.dormant_aimbot = ragebot:switch(v97("eye-low-vision", "Dormant aimbot", 2), false, function(p136)
-				-- upvalues: v97 (copy)
-				return {
-					hitboxes = p136:selectable(v97("layer-group", "Hitboxes", 4), {
-						[1] = "Head",
-						[2] = "Chest",
-						[3] = "Stomach"
-					}),
-					accuracy = p136:slider(v97("microscope", "Accuracy", 4), 35, 100, 75, nil, "%"),
-					damage = p136:slider(v97("claw-marks", "Min. Damage", 3), 1, 126, 10, nil, function(p137)
-						if p137 ~= 1 then
-							if not (p137 > 100) then
-								return p137
-							end
-
-							return string.format("HP+ %i", p137 - 100)
-						end
-
-						return "Inherited"
-					end),
-					auto_scope = p136:switch(v97("crosshairs-simple", "Auto scope", 4))
-				}
-			end)
-			t49.logs = ragebot:switch(v97("terminal", "Logs", 3), true, function(p138)
-				-- upvalues: v97 (copy), pui (copy)
-				return {
-					clr = p138:color_picker(v97("palette", "Accent", 3), {
-						Miss = {
-							[1] = pui.colors.miss
-						},
-						Hit = {
-							[1] = pui.colors.hit
-						}
-					}),
-					display = p138:selectable(v97("desktop", "Display", 2), {
-						[1] = "Screen",
-						[2] = "Events",
-						[3] = "Console"
-					})
-				}, true
-			end)
-			t49.decrase_hold_aim_ticks = ragebot:switch(v97("crosshairs", "Decrase hold aim ticks", 4))
-			t49.decrase_hold_aim_ticks:set_callback(function(p139)
-				cvar.sv_maxusrcmdprocessticks_holdaim:int(p139:get() and 0 or 1)
-			end)
-			events.shutdown:set(function()
-				cvar.sv_maxusrcmdprocessticks_holdaim:int(1)
-			end)
-			ragebot:depend({
-				[1] = nil,
-				[2] = 1,
-				[1] = v143
-			})
-			t38.widgets = t40
-			t38.in_game = t42
-			t38.indicators = t41
-			t38.features = t45
-			t38.shared = t46
-			t38.other = t47
-			t38.cache = t48
-			t38.style = t39
-			t38.rage = t49
-			t27.settings = t38
-			utils.execute_after(0.1, pui.setup, t27)
-			t50 = {}
-
-			local t51 = {
-				sended = 0,
-				yaw = {
-					[0] = "Disabled",
-					switch_side = false,
-					avoid_backstab = false,
-					next_switch = 0,
-					offset = 0,
-					base = "Local View",
-					hidden = false
-				},
-				yaw_modifier = {
-					[0] = "Disabled",
-					offset = 0
-				},
-				body_yaw = {
-					[0] = false,
-					inverter = false,
-					freestanding = "Off",
-					right_limit = 0,
-					left_limit = 0,
-					options = {}
-				}
-			}
-			local anti_aimbot = t27.anti_aimbot
-			local u166 = false
-			local u167 = false
-			local v168 = ui.find("Aimbot", "Anti Aim", "Misc", "Slow Walk")
-			local v169 = ui.find("Aimbot", "Anti Aim", "Misc", "Fake Duck")
-
-			local function v170(p140, p141)
-				-- upvalues: t51 (copy)
-				local v673 = t51.sended % p140
-				local v674 = math.floor(p140 * 0.5)
-
-				if v674 <= v673 then
-					if p140 % 2 == 0 then
-						v673 = v673 + 1
-					end
-
-					if v673 == v674 then
-						return 0
-					end
-				end
-
-				local v675 = (v673 - v674) / v674
-
-				return (math.floor(p141 * v675))
-			end
-
-			function t50.get_statement()
-				-- upvalues: u166 (ref), u167 (ref), v168 (copy), v169 (copy)
-				local v676 = entity.get_local_player()
-
-				if v676 and v676:is_alive() then
-					local m_fFlags = v676.m_fFlags
-					local v678 = v676.m_vecVelocity:length()
-					local v679 = bit.band(m_fFlags, 2) == 2
-					local v680 = u166 or bit.band(m_fFlags, 1) ~= 1
-					local v681 = u167 or v168:get()
-
-					if not v680 then
-						if not v679 and not v169:get() then
-							if not (v678 > 2) then
-								return 2
-							end
-
-							return v681 and 4 or 3
-						end
-
-						return v678 > 2 and 6 or 5
-					end
-
-					return v679 and 8 or 7
-				end
-
-				return 1
-			end
-
-			local t52 = {
-				enabled = pui.find("Aimbot", "Anti Aim", "Angles", "Enabled"),
-				yaw = pui.find("Aimbot", "Anti Aim", "Angles", "Yaw", {
-					base = "Base",
-					avoid_backstab = "Avoid Backstab",
-					hidden = "Hidden",
-					offset = "Offset"
-				}),
-				yaw_modifier = pui.find("Aimbot", "Anti Aim", "Angles", "Yaw Modifier", {
-					offset = "Offset"
-				}),
-				body_yaw = pui.find("Aimbot", "Anti Aim", "Angles", "Body Yaw", {
-					options = "Options",
-					inverter = "Inverter",
-					freestanding = "Freestanding",
-					right_limit = "Right Limit",
-					left_limit = "Left Limit"
-				}),
-				freestanding = pui.find("Aimbot", "Anti Aim", "Angles", "Freestanding", {
-					body_freestanding = "Body Freestanding",
-					disable_yaw_modifiers = "Disable Yaw Modifiers"
-				})
-			}
-
-			local function v172()
-				-- upvalues: anti_aimbot (copy), v169 (copy), t51 (copy)
-				local v682 = entity.get_local_player()
-
-				if v682 and v682:is_alive() then
-					local v683 = v682:get_eye_position()
-					local edge_yaw = anti_aimbot.general.edge_yaw
-					local v685 = edge_yaw.while_fd:get() and v169:get()
-
-					if not edge_yaw:get() and not v685 then
-						return
-					end
-
-					local v686 = nil
-					local huge = math.huge
-
-					for i = 30, 360, 30 do
-						local v689 = math.normalize_yaw(i)
-						local v690 = v683 + vector():angles(0, v689) * 1000
-						local v691 = utils.trace_line(v683, v690, v682)
-						local v692 = v691.start_pos:dist(v691.end_pos)
-
-						if v692 < huge then
-							huge = v692
-							v686 = i
-						end
-					end
-
-					if v686 then
-						t51.yaw[0] = "Static"
-						t51.yaw.offset = v686
-						t51.body_yaw[0] = false
-						t51.yaw_modifier[0] = "Disabled"
-					end
-
-					return true
-				end
-			end
-			local function v173(p142)
-				-- upvalues: v172 (copy), anti_aimbot (copy), t51 (copy)
-				local v694 = v172()
-				local manual_yaw = anti_aimbot.general.manual_yaw
-				local v696 = manual_yaw:get()
-				local freestanding = anti_aimbot.general.freestanding
-
-				if not v694 then
-					if v696 == "Disabled" then
-						if (freestanding:get() or freestanding:get_override()) and rage.antiaim:get_target(true) and p142:get("Freestanding") then
-							t51.yaw[0] = "Backward"
-							t51.yaw.offset = 0
-							t51.body_yaw[0] = true
-							t51.body_yaw.left_limit = 60
-							t51.body_yaw.right_limit = 60
-							t51.yaw_modifier[0] = "Disabled"
-						end
-					else
-						local t53 = {
-							Left = -90,
-							Backward = 0,
-							Forward = 180,
-							Right = 90
-						}
-
-						t51.yaw.base = manual_yaw.yaw_base:get()
-
-						if not p142:get("Manual Yaw") then
-							t51.yaw.offset = t51.yaw.offset + (t53[v696] or 0)
-						else
-							t51.yaw[0] = "Backward"
-							t51.yaw.offset = t53[v696] or 0
-							t51.body_yaw[0] = true
-							t51.body_yaw.left_limit = 60
-							t51.body_yaw.right_limit = 60
-							t51.yaw_modifier[0] = "Disabled"
-						end
-					end
-
-					return
-				end
-			end
-			local function v174(p143)
-				if not entity.get_game_rules().m_bWarmupPeriod or not p143.warmup:get() then
-					local t54 = {}
-
-					entity.get_players(true, true, function(p144)
-						-- upvalues: t54 (copy)
-						if p144:is_alive() then
-							t54[#t54 + 1] = p144
-						end
-					end)
-
-					if #t54 ~= 0 or not p143.no_enemy:get() then
-						return
-					end
-
-					return true
-				end
-
-				return true
-			end
-			local function v175(p145)
-				-- upvalues: t51 (copy)
-				local options = p145.options
-
-				t51.body_yaw[0] = p145:get()
-				t51.body_yaw.left_limit = p145.left:get()
-				t51.body_yaw.right_limit = p145.right:get()
-				t51.body_yaw.options = {
-					[1] = options.avoid_overlap:get() and "Avoid Overlap" or "",
-					[2] = options.jitter:get() and "Jitter" or "",
-					[3] = options.randomize_jitter:get() and "Randomize Jitter" or "",
-					[4] = options.anti_bruteforce:get() and "Anti Bruteforce" or ""
-				}
-				t51.body_yaw.freestanding = p145.freestanding:get()
-			end
-			local function v176(p146)
-				-- upvalues: t51 (copy), v170 (copy)
-				if p146:get() ~= "X-Way" then
-					t51.yaw_modifier[0] = p146:get()
-					t51.yaw_modifier.offset = p146.offset:get()
-				else
-					t51.yaw_modifier[0] = "Disabled"
-
-					local v704 = p146.ways:get()
-					local v705 = p146.offset:get()
-
-					t51.yaw.offset = math.normalize_yaw(t51.yaw.offset + v170(v704, v705) * 0.5)
-				end
-			end
-			local function v177(p147, p148)
-				if not (p147 <= 0) then
-					local v708 = math.abs(p148) * (p147 / 100)
-
-					return p148 + (math.random() * 2 - 1) * v708
-				end
-
-				return p148
-			end
-			local function v178(p149)
-				-- upvalues: t51 (copy), v177 (copy), v22 (copy)
-				t51.yaw[0] = "Backward"
-				t51.yaw.base = "At Target"
-
-				local v710 = p149.randomize:get()
-				local v711 = p149.left:get()
-				local v712 = p149.right:get()
-
-				if p149:get() ~= "180° L/R" then
-					t51.yaw.offset = v177(v710, p149.offset:get())
-				else
-					local v713 = p149.delay:get()
-
-					if not (v713 > 1) then
-						t51.yaw.offset = rage.antiaim:inverter() and v177(v710, v711) or v177(v710, v712)
-					else
-						if t51.sended >= t51.yaw.next_switch then
-							t51.yaw.switch_side = not t51.yaw.switch_side
-
-							local v714 = p149.variability:get()
-							local v715 = v177(v714, v713)
-
-							t51.yaw.next_switch = t51.sended + math.max(1, v715)
-						end
-
-						t51.yaw.offset = t51.yaw.switch_side and v177(v710, v711) or v177(v710, v712)
-
-						if v22(t51.body_yaw.options, "Jitter") then
-							rage.antiaim:inverter(t51.yaw.switch_side)
-						end
-					end
-				end
-			end
-			local function v179(p150, p151, _, p153)
-				-- upvalues: t18 (copy), t51 (copy)
-				local v720 = p150.conditions:get(p153)
-				local v721 = t18.ragebot.hide_shots:get() or t18.ragebot.hide_shots:get_override()
-				local v722 = p150.compatible_with_hide_shots:get()
-				local v723 = p151:get()
-				local s9 = nil
-				local s10 = nil
-
-				if v720 then
-					if not v721 then
-						s9 = "Always On"
-					end
-
-					if v722 and v721 then
-						s10 = "Break LC"
-					end
-				end
-
-				t51.yaw.hidden = (s9 ~= nil or s10 ~= nil) and (v720 and v723)
-				t18.ragebot.double_tap.lag_options:override(s9)
-				t18.ragebot.hide_shots.options:override(s10)
-			end
-			local function v180(p154, _, p156)
-				-- upvalues: t18 (copy), u87 (ref), t51 (copy)
-				local v729 = t18.ragebot.double_tap:get() or t18.ragebot.hide_shots:get() and (t18.ragebot.hide_shots.options:get() == "Break LC" or t18.ragebot.hide_shots.options:get_override() == "Break LC")
-
-				if p154:get() and v729 then
-					if not u87 then
-						return
-					end
-
-					t51.body_yaw[0] = true
-					t51.body_yaw.inverter = false
-					t51.body_yaw.left_limit = 0
-					t51.body_yaw.right_limit = 0
-					t51.body_yaw.options = {}
-					t51.body_yaw.freestanding = "Off"
-
-					if p154.yaw:get() ~= "Disabled" then
-						t51.yaw.offset = 0
-						t51.yaw_modifier[0] = "Disabled"
-					end
-
-					local v730 = p154.pitch:get()
-					local v731
-
-					if v730 ~= "Custom" then
-						if v730 ~= "Random" then
-							if v730 ~= "Jitter" then
-								v731 = ({
-									Up = -89,
-									Down = 89,
-									Disabled = 89
-								})[v730] or 89
-							else
-								v731 = p156 and p154.pitch.second:get() or p154.pitch.first:get()
-							end
-						else
-							local v732 = p154.pitch.first:get()
-							local v733 = p154.pitch.second:get()
-
-							v731 = math.random(math.min(v732, v733), math.max(v732, v733))
-						end
-					else
-						v731 = p154.pitch.amount:get()
-					end
-
-					rage.antiaim:override_hidden_pitch(v731)
-
-					local v734 = p154.yaw:get()
-					local v735 = p154.yaw.amount:get()
-
-					if v734 ~= "Forward" then
-						if v734 ~= "Custom" then
-							if v734 ~= "Sideways" then
-								if v734 ~= "Random" then
-									if v734 ~= "Center" then
-										if v734 ~= "Spin" then
-											v735 = 0
-										else
-											if not t51.spin_yaw then
-												t51.spin_yaw = 0
-											end
-
-											t51.spin_yaw = (t51.spin_yaw + 180 * (p154.yaw.speed:get() / 10)) % 360
-											v735 = t51.spin_yaw
-										end
-									else
-										v735 = p156 and -v735 * 0.5 or v735 * 0.5
-									end
-								else
-									v735 = math.random(-180, 180)
-								end
-							else
-								v735 = p156 and 90 or -90
-							end
-						end
-					else
-						v735 = 180
-					end
-
-					rage.antiaim:override_hidden_yaw_offset(v735)
-
-					return
-				end
-			end
-			local function v181()
-				-- upvalues: anti_aimbot (copy), v22 (copy), t18 (copy), t50 (copy)
-				local v736 = nil
-				local v737 = anti_aimbot.other.fakelag_disablers:get()
-
-				if not v22(v737, "Double Tap") or not t18.ragebot.double_tap:get() then
-					if not v22(v737, "Hide Shots") or not t18.ragebot.hide_shots:get() then
-						if v22(v737, "Standing") and t50.get_statement() == 2 then
-							v736 = false
-						end
-					else
-						v736 = false
-					end
-				else
-					v736 = false
-				end
-
-				t18.anti_aim.fake_lag.enabled:override(v736)
-			end
-			local function v182()
-				-- upvalues: anti_aimbot (copy), t3 (copy), t50 (copy), t51 (copy)
-				local safe_head = anti_aimbot.general.safe_head
-				local weapon = safe_head.weapon
-				local v740 = safe_head.height_difference:get()
-
-				if safe_head:get() then
-					local v741 = entity.get_local_player()
-
-					if v741 and v741:is_alive() then
-						local v742 = v741:get_player_weapon()
-
-						if v742 then
-							local v743 = v742:get_classid()
-							local v744 = false
-
-							if not weapon:get("Knife") or v743 ~= 107 then
-								if weapon:get("Zeus") and v743 == 268 then
-									v744 = true
-								end
-							else
-								v744 = true
-							end
-
-							if not t3[t50.get_statement()]:find("In Air") then
-								v744 = false
-							end
-
-							local v745 = entity.get_threat()
-
-							if v745 then
-								local v746 = v741:get_eye_position()
-								local v747 = v745:get_eye_position()
-								local v748 = v746.z - v747.z
-
-								if v740 > 0 and v748 < v740 then
-									v744 = false
-								end
-
-								if v744 then
-									t51.yaw[0] = "Backward"
-									t51.yaw.base = "At Target"
-									t51.yaw.offset = -18
-									t51.yaw.hidden = false
-									t51.yaw_modifier[0] = "Disabled"
-									t51.body_yaw[0] = true
-									t51.body_yaw.inverter = true
-									t51.body_yaw.left_limit = 60
-									t51.body_yaw.right_limit = 60
-									t51.body_yaw.options = {}
-									t51.body_yaw.freestanding = "Off"
-								end
-
-								return
-							end
-
-							return
-						end
-
-						return
-					end
-
-					return
-				end
-			end
-
-			local t55 = {}
-			local animation_breaker = anti_aimbot.other.animation_breaker
-			local leg_movement = t18.anti_aim.other.leg_movement
-			local t56 = {}
-			local t57 = {}
-
-			local function v188(p157, p158, p159)
-				-- upvalues: leg_movement (copy)
-				leg_movement:override()
-
-				if p157 ~= "Falling" then
-					if p157 ~= "Jitter legs" then
-						if p157 ~= "Follow direction" then
-							if p157 ~= "Moon walk" then
-								if p157 ~= "Walking" then
-									if p157 == "Kangaroo" then
-										p159[3] = math.random()
-										p159[7] = math.random()
-										p159[6] = math.random()
-									end
-								else
-									p158[6].m_flWeight = 1.5
-								end
-							else
-								leg_movement:override("Walking")
-								p159[7] = 0
-							end
-						else
-							leg_movement:override("Sliding")
-							p159[0] = 1
-						end
-					else
-						leg_movement:override("Sliding")
-						p159[0] = utils.random_float(0.1, 0.9)
-					end
-				else
-					p159[6] = 1
-				end
-			end
-			local function v189(p160, p161, p162)
-				if p160.m_vecVelocity:length2d() > 3.3 then
-					p161[12].m_flWeight = p162 * 0.1
-				end
-			end
-			local function v190(p163, p164, p165, p166)
-				-- upvalues: t56 (copy), t57 (copy)
-				for i = 0, 12 do
-					local v760 = p164[i]
-					local v761 = p165 * (t56[i] or 0) + p166 * v760
-
-					t56[i] = v761
-					p164[i] = v761
-				end
-
-				for i = 0, 12 do
-					local v763 = p163[i]
-
-					if v763 then
-						local m_flWeight = v763.m_flWeight
-						local v765 = p165 * (t57[i] or 0) + p166 * m_flWeight
-
-						t57[i] = v765
-						v763.m_flWeight = v765
-					end
-				end
-			end
-
-			function t55.post_anim_update(p167)
-				-- upvalues: animation_breaker (copy), leg_movement (copy), t3 (copy), t50 (copy), v189 (copy), v190 (copy), v188 (copy)
-				if animation_breaker:get() then
-					local v767 = entity.get_local_player()
-
-					if v767 and v767:is_alive() then
-						if globals.curtime - to_time(v767.m_nTickBase) == 0 then
-							if p167:get_index() == v767:get_index() then
-								local v768 = ffi.cast("uintptr_t", v767[0])
-								local v769 = ffi.cast("CAnimationLayer**", v768 + 10640)[0]
-								local v770 = animation_breaker.leaning:get()
-								local v771 = animation_breaker.interpolation:get()
-								local v772 = t3[t50.get_statement()]:find("Air") and animation_breaker.air:get() or animation_breaker.ground:get()
-
-								v189(v767, v769, v770)
-
-								if v771 > 0 then
-									local v773 = globals.tickinterval * v771
-									local v774 = 1 - v773
-									local m_flPoseParameter = v767.m_flPoseParameter
-
-									v190(v769, m_flPoseParameter, v773, v774)
-								end
-
-								v188(v772, v769, v767.m_flPoseParameter)
-
-								return
-							end
-
-							return
-						end
-
-						return
-					end
-
-					return
-				end
-
-				leg_movement:override()
-			end
-			function t50.post_update_clientside_animation(p168)
-				-- upvalues: t55 (copy)
-				t55.post_anim_update(p168)
-			end
-			function t50.render()
-			end
-			function t50.shutdown()
-				-- upvalues: t18 (copy)
-				t18.anti_aim.other.leg_movement:override()
-			end
-			function t50.createmove(p169)
-				-- upvalues: u166 (ref), u167 (ref), t51 (copy), t50 (copy), anti_aimbot (copy), v175 (copy), v178 (copy), v176 (copy), v173 (copy), v179 (copy), v180 (copy), v181 (copy), v182 (copy), t52 (copy), v174 (copy)
-				u166 = p169.in_jump
-				u167 = p169.in_speed
-
-				if p169.choked_commands == 0 then
-					t51.sended = t51.sended + 1
-				end
-
-				local v778 = t50.get_statement()
-				local v779 = anti_aimbot.builder[v778].override:get() and anti_aimbot.builder[v778] or anti_aimbot.builder[1]
-				local v780 = t51.sended % 2 == 0
-
-				v175(v779.desync)
-				v178(v779.yaw)
-				v176(v779.modifier)
-				v173(anti_aimbot.other.static_yaw)
-				v179(anti_aimbot.other.defensive, v779.defensive, p169, v778 - 1)
-				v180(v779.defensive, p169, v780)
-				v181()
-				v182()
-				t52.enabled:override(not v174(anti_aimbot.other.disablers))
-				t52.yaw:override(t51.yaw[0])
-				t52.yaw.base:override(t51.yaw.base)
-				t52.yaw.offset:override(t51.yaw.offset)
-				t52.yaw.avoid_backstab:override(anti_aimbot.general.avoid_backstab:get())
-				t52.yaw.hidden:override(t51.yaw.hidden)
-				t52.yaw_modifier:override(t51.yaw_modifier[0])
-				t52.yaw_modifier.offset:override(t51.yaw_modifier.offset)
-				t52.body_yaw:override(t51.body_yaw[0])
-				t52.body_yaw.inverter:override(t51.body_yaw.inverter)
-				t52.body_yaw.left_limit:override(t51.body_yaw.left_limit)
-				t52.body_yaw.right_limit:override(t51.body_yaw.right_limit)
-				t52.body_yaw.options:override(t51.body_yaw.options)
-				t52.body_yaw.freestanding:override(t51.body_yaw.freestanding)
-				p169.jitter_move = anti_aimbot.general.jitter_move:get()
-
-				local v781 = anti_aimbot.general.freestanding:get() or anti_aimbot.general.freestanding:get_override()
-
-				if anti_aimbot.general.manual_yaw:get() ~= "Disabled" and anti_aimbot.other.static_yaw:get("Manual Yaw") then
-					v781 = false
-				end
-
-				t52.freestanding:override(v781)
-			end
-		end
-
-		t58 = {}
-		settings = t27.settings
-
-		local style = settings.style
-
-		function v194(p170)
-			-- upvalues: pui (copy)
-			local v793 = pui.get_binds()
-
-			for i = 1, #v793 do
-				local v795 = v793[i]
-
-				if v795.active and p170 == v795.name then
-					return true
-				end
-			end
-
-			return false
-		end
-
-		v195 = render.load_font("Trebuc", 13, "ad")
-
-		local v196 = render.load_font("Trebuc", 20, "ad")
-
-		n17 = 5
-
-		local n18 = 3
-		local n19 = 0.5
-
-		function u200(p171, p172, p173, p174, p175)
-			-- upvalues: style (copy), n19 (copy), n18 (copy)
-			if style.blur:get() then
-				render.blur(p171, p171 + p172, n19, p173 / 255, n18)
-			end
-
-			render.rect(p171, p171 + p172, color(0, 0, 0, p173 * p175), n18)
-
-			local x = p172.x
-			local v802 = vector(2, p172.y - 8)
-			local v803 = p171 + vector(-1, 4)
-
-			if style.glow:get() then
-				render.shadow(v803, v803 + v802, p174:alpha_modulate(p173))
-			end
-
-			render.rect(v803, v803 + v802, p174:alpha_modulate(p173), n18)
-
-			local v804 = p171 + vector(x - 1, 4)
-
-			if style.glow:get() then
-				render.shadow(v804, v804 + v802, p174:alpha_modulate(p173))
-			end
-
-			render.rect(v804, v804 + v802, p174:alpha_modulate(p173), n18)
-		end
-
-		t59 = {}
-
-		local widgets = settings.widgets
-		local cache = settings.cache
-		local watermark = widgets.watermark
-		local n20 = 10
-		local v206 = smoothy.new(0)
-		local v207 = smoothy.new(54 + n17 * 2)
-		local v208 = t9.new("Watermark"):set_pos(vector(v28.x - n20, n20)):update(true)
-
-		v208.align = cache.align_wm.value or 0
-
-		local u209 = cache.pos_x_wm.value ~= 0 and cache.pos_x_wm.value or v208.pos.x
-
-		function v208.on_dragging(p176)
-			-- upvalues: u209 (ref), cache (copy)
-			u209 = p176.pos.x
-			p176.align = 0
-			cache.align_wm:set(0)
-		end
-		function v208.on_release(p177)
-			-- upvalues: v28 (copy), u209 (ref), cache (copy)
-			local v808 = v28.x / 3
-			local v809 = u209 + p177.size.x * 0.5
-			local v810 = math.floor(v809 / v808)
-
-			if v810 ~= p177.align then
-				p177.align = v810
-
-				if p177.align ~= 1 then
-					if p177.align == 2 then
-						u209 = u209 + p177.size.x
-					end
-				else
-					u209 = u209 + p177.size.x * 0.5
-				end
-
-				cache.align_wm:set(p177.align)
-				cache.pos_x_wm:set(u209)
-			end
-		end
-		function v208.render_callback(p178)
-			-- upvalues: v206 (copy), v208 (copy), style (copy), t2 (copy), watermark (copy), pui (copy), v195 (copy), v207 (copy), n17 (copy), u209 (ref), u200 (ref), v28 (copy), n20 (copy)
-			local pos = p178.pos
-
-			v206:update(0.05, 255)
-			v208.is_active = not (v206.value <= 1)
-
-			if not (v206.value <= 1) then
-				local value = v206.value
-				local v814 = style.accent:get()
-				local v815 = v814.a / 255
-				local v816 = v814:alpha_modulate(255)
-				local t60 = { string.format("\a%s\f<%s>\r %s", v816:to_hex(), t2.icon, t2.name) }
-
-				if watermark.fields:get("User") then
-					local v818 = watermark.username:get():match("^%s*(.*%S)%s*$") or ""
-					local v819 = #v818 > 0 and v818 or common.get_username()
-
-					table.insert(t60, string.format("\a%s\f<user>\r %s", v816:to_hex(), v819))
-				end
-
-				if watermark.fields:get("Ping") and globals.is_connected then
-					local v820 = math.floor(utils.net_channel().avg_latency[1] * 1000 + 0.5)
-
-					table.insert(t60, string.format("\a%s\f<wifi>\r %sms", v816:to_hex(), v820))
-				end
-
-				if watermark.fields:get("Time") then
-					table.insert(t60, string.format("\a%s\f<clock>\r %s", v816:to_hex(), string.lower(common.get_date("%I:%M %p", common.get_unixtime()))))
-				end
-
-				local v821 = pui.string(table.concat(t60, " "))
-				local v822 = render.measure_text(v195, nil, v821)
-
-				v207:update(0.05, v822.x + n17 * 2)
-
-				local value2 = v207.value
-				local v824 = v822.y + n17 * 1.5
-				local v825 = vector(value2, v824)
-
-				if p178.align ~= 1 then
-					if p178.align == 2 then
-						p178.pos.x = u209 - value2
-					end
-				else
-					p178.pos.x = u209 - value2 * 0.5
-				end
-
-				u200(pos, v825, value, v816, v815)
-				render.push_clip_rect(pos, pos + v825)
-				render.text(v195, pos + v825 * 0.5, color(255, value), "c", v821)
-				render.pop_clip_rect()
-				p178:set_rules({
-					[1] = {
-						horizontal = true,
-						pos = vector(v28.x / 2, v28.y / 2)
-					},
-					[2] = {
-						horizontal = true,
-						pos = vector(v825.x * 0.5 + n20, v28.y / 2)
-					},
-					[3] = {
-						horizontal = true,
-						pos = vector(v28.x - (v825.x * 0.5 + n20), v28.y / 2)
-					},
-					[4] = {
-						horizontal = false,
-						pos = vector(0, v28.y * 0.5)
-					},
-					[5] = {
-						horizontal = false,
-						pos = vector(v28.x / 2, v825.y * 0.5 + n20)
-					},
-					[6] = {
-						horizontal = false,
-						pos = vector(v28.x / 2, v28.y - v825.y * 0.5 - n20)
-					}
-				})
-				p178:set_size(v825)
-
-				return
-			end
-		end
-
-		local keybinds = widgets.keybinds
-		local n21 = 18
-		local n22 = 2
-		local n23 = 120
-		local n24 = 22
-		local v215 = smoothy.new(0)
-		local v216 = smoothy.new(n23)
-		local v217 = smoothy.new(0)
-		local v218 = t9.new("Keybinds"):set_pos(vector(v28.x - 140, 80)):update(true)
-
-		local function v219(p179)
-			local value = p179.value
-			local mode = p179.mode
-
-			if type(value) ~= "boolean" then
-				if type(value) ~= "table" then
-					return tostring(value)
-				end
-
-				return table.concat(value, ", ")
-			end
-
-			return mode == 1 and "hold" or "toggle"
-		end
-		local function v220()
-			-- upvalues: pui (copy), t8 (copy), v219 (copy)
-			local v829 = pui.get_binds()
-			local t61 = {}
-
-			for _, v in pairs(v829) do
-				local v833 = t8.new(v.name .. " / keybinds", 0):update(0.05, v.active and 1 or 0)
-
-				if v833.value > 0.1 then
-					t61[#t61 + 1] = {
-						name = v.name,
-						value = v219(v),
-						anim = v833.value
-					}
-				end
-			end
-
-			return t61, not (#t61 < 1)
-		end
-
-		function v218.render_callback(p180)
-			-- upvalues: v220 (copy), keybinds (copy), v215 (copy), v218 (copy), style (copy), n23 (copy), v195 (copy), n17 (copy), v216 (copy), pui (copy), n24 (copy), u200 (ref), n21 (copy), n22 (copy), v217 (copy), n19 (copy), n18 (copy), floor (copy), v24 (copy)
-			local pos = p180.pos
-			local v836, v837 = v220()
-			local v838 = keybinds:get() and (v837 or not (ui.get_alpha() <= 0))
-
-			v215:update(0.05, v838 and 255 or 0)
-			v218.is_active = not (v215.value <= 1)
-
-			if not (v215.value <= 1) then
-				local value = v215.value
-				local v840 = style.accent:get()
-				local v841 = v840.a / 255
-				local v842 = n23
-
-				for _, v in ipairs(v836) do
-					local v845 = render.measure_text(v195, nil, v.name).x + render.measure_text(v195, nil, v.value).x + n17 * 4
-
-					if v842 < v845 then
-						v842 = v845
-					end
-				end
-
-				v216:update(0.05, v842)
-
-				local v846 = math.ceil(v216.value)
-				local v847 = pui.string(string.format("\a%s\f<keyboard> \rkeybinds", style.accent:get():alpha_modulate(value):to_hex()))
-				local v848 = vector(v846, n24)
-
-				u200(pos, v848, value, v840, v841)
-				render.text(v195, pos + v848 * 0.5, color(255, value), "c", v847)
-
-				local n25 = 0
-				local v850 = pos + vector(0, n24 + 1)
-				local n26 = 0
-
-				for _, v in ipairs(v836) do
-					n26 = n26 + (n21 + n22) * v.anim
-				end
-
-				v217:update(0.05, math.ceil(n26))
-
-				local v854 = math.ceil(v217.value)
-
-				if v854 > 0 then
-					local v855 = vector(v846, v854 + n17)
-
-					if style.blur:get() then
-						render.blur(v850, v850 + v855, n19, value / 255, n18)
-					end
-
-					render.rect(v850, v850 + v855, color(0, 0, 0, value * v841 * 0.7), n18)
-				end
-
-				for _, v in ipairs(v836) do
-					local v858 = value * v.anim
-					local v859 = floor(n25)
-					local v860 = tostring(v.value):lower()
-
-					render.text(v195, v850 + vector(n17, v859 + n17), color(255, v858), nil, v24(v.name))
-
-					local x = render.measure_text(v195, nil, v860).x
-
-					render.text(v195, v850 + vector(v846 - n17 - x, v859 + n17), color(180, 180, 180, v858), nil, v860)
-					n25 = n25 + (n21 + n22) * v.anim
-				end
-
-				p180:set_size(vector(v846, n24 + 1 + v854 + n17))
-
-				return
-			end
-		end
-
-		local t62 = {}
-		local spectators = widgets.spectators
-		local n27 = 18
-		local n28 = 2
-		local n29 = 120
-		local n30 = 22
-		local v227 = smoothy.new(0)
-		local v228 = smoothy.new(n29)
-		local v229 = smoothy.new(0)
-		local v230 = t9.new("Spectators"):set_pos(vector(v28.x - 140, 200)):update(true)
-
-		local function v231()
-			-- upvalues: t8 (copy)
-			local v862 = entity.get_local_player()
-
-			if v862 then
-				local v863 = v862.m_hObserverTarget and (v862.m_iObserverMode == 4 or v862.m_iObserverMode == 5) and v862.m_hObserverTarget or v862
-				local t63 = {}
-
-				entity.get_players(false, false, function(p181)
-					-- upvalues: v863 (copy), v862 (copy), t8 (copy), t63 (copy)
-					local v1350 = p181:get_player_info()
-					local v1351 = p181.m_hObserverTarget == v863 and (p181.m_iObserverMode == 4 or (p181.m_iObserverMode == 5 or v1350.is_fake_player))
-					local v1352 = not p181:is_alive() and (p181 ~= v862 and v1351)
-					local v1353 = t8.new(p181:get_index() .. " / spectators", 0):update(0.05, v1352 and 1 or 0)
-
-					if v1353.value > 0.1 then
-						t63[#t63 + 1] = {
-							name = p181:get_name(),
-							avatar = p181:get_steam_avatar(),
-							anim = v1353.value
-						}
-					end
-				end)
-
-				return t63, not (#t63 < 1)
-			end
-
-			return {}, false
-		end
-
-		function t62.level_init()
-			-- upvalues: t8 (copy)
-			t8.clear(" / spectators")
-		end
-		function t62.level_shutdown()
-			-- upvalues: t8 (copy)
-			t8.clear(" / spectators")
-		end
-		function v230.render_callback(p182)
-			-- upvalues: v231 (copy), spectators (copy), v227 (copy), v230 (copy), style (copy), n29 (copy), v195 (copy), n17 (copy), v228 (copy), pui (copy), n30 (copy), u200 (ref), n27 (copy), n28 (copy), v229 (copy), n19 (copy), n18 (copy), floor (copy)
-			local pos = p182.pos
-			local v867, v868 = v231()
-			local v869 = spectators:get() and (v868 or not (ui.get_alpha() <= 0))
-
-			v227:update(0.05, v869 and 255 or 0)
-			v230.is_active = not (v227.value <= 1)
-
-			if not (v227.value <= 1) then
-				local value = v227.value
-				local v871 = style.accent:get()
-				local v872 = v871.a / 255
-				local n31 = 14
-				local v874 = n29
-
-				for _, v in ipairs(v867) do
-					local v877 = render.measure_text(v195, nil, v.name).x + (v.avatar and n31 + n17 or 0) + n17 * 3
-
-					if v874 < v877 then
-						v874 = v877
-					end
-				end
-
-				v228:update(0.05, v874)
-
-				local v878 = math.ceil(v228.value)
-				local v879 = pui.string(string.format("\a%s\f<eye> \rspectators", style.accent:get():alpha_modulate(value):to_hex()))
-				local v880 = vector(v878, n30)
-
-				u200(pos, v880, value, v871, v872)
-				render.text(v195, pos + v880 * 0.5, color(255, value), "c", v879)
-
-				local n32 = 0
-				local v882 = pos + vector(0, n30 + 1)
-				local n33 = 0
-
-				for _, v in ipairs(v867) do
-					n33 = n33 + (n27 + n28) * v.anim
-				end
-
-				v229:update(0.05, math.ceil(n33))
-
-				local v886 = math.ceil(v229.value)
-
-				if v886 > 0 then
-					local v887 = vector(v878, v886 + n17)
-
-					if style.blur:get() then
-						render.blur(v882, v882 + v887, n19, value / 255, n18)
-					end
-
-					render.rect(v882, v882 + v887, color(0, 0, 0, value * v872 * 0.7), n18)
-				end
-
-				for _, v in ipairs(v867) do
-					local v890 = value * v.anim
-					local v891 = floor(n32)
-
-					render.text(v195, v882 + vector(n17, v891 + n17), color(255, v890), nil, v.name)
-
-					if v.avatar then
-						local v892 = v882 + vector(v878 - n17 - n31, v891 + n17)
-
-						render.texture(v.avatar, v892, vector(n31, n31), color(255, v890), "f", 2)
-					end
-
-					n32 = n32 + (n27 + n28) * v.anim
-				end
-
-				p182:set_size(vector(v878, n30 + 1 + v886 + n17))
-
-				return
-			end
-		end
-
-		local velocity_warning = widgets.velocity_warning
-		local v233 = smoothy.new(0)
-		local v234 = smoothy.new(0)
-		local v235 = t9.new("Velocity Warning"):set_pos(vector(v28.x / 2 - 75, v28.y / 2 + 100)):update(true)
-
-		function v235.render_callback(p183)
-			-- upvalues: velocity_warning (copy), v233 (copy), v235 (copy), style (copy), pui (copy), v196 (copy), v195 (copy), u200 (ref), n17 (copy), v234 (copy), v28 (copy)
-			local v894 = entity.get_local_player()
-			local n34 = 1
-
-			if not (ui.get_alpha() > 0.5) then
-				if v894 and v894:is_alive() then
-					n34 = v894.m_flVelocityModifier
-				end
-			else
-				n34 = 1 - math.abs(math.sin(globals.realtime * 2)) * 0.4
-			end
-
-			local v896 = velocity_warning:get() and (not (n34 >= 0.99) or not (ui.get_alpha() <= 0))
-
-			v233:update(0.05, v896 and 255 or 0)
-			v235.is_active = not (v233.value <= 1)
-
-			if not (v233.value <= 1) then
-				local value = v233.value
-				local v898 = style.accent:get()
-				local v899 = v898.a / 255
-				local v900 = pui.string("\f<triangle-exclamation>")
-				local v901 = pui.string("slowed down")
-				local v902 = pui.string(string.format("\a%s%d%%", style.accent:get():alpha_modulate(255):to_hex(), math.floor(n34 * 100 + 0.5)))
-				local v903 = render.measure_text(v196, nil, v900)
-
-				render.measure_text(v195, nil, v901)
-
-				local n35 = 8
-				local v905 = v903.x + n35 * 2
-				local v906 = v905 + 132
-				local v907 = vector(v906, 38)
-				local pos = p183.pos
-
-				u200(pos, v907, value, v898, v899)
-				render.text(v196, pos + vector((v905 - v903.x) / 2 + n35 / 4.5, (v907.y - v903.y) / 2), style.accent:get():alpha_modulate(value), "", v900)
-
-				local v909 = color(255, 255, 255, value * 0.1)
-
-				render.rect(pos + vector(v905, 6), pos + vector(v905 + 1, v907.y - 6), v909)
-
-				local v910 = v905 + n17 * 2
-
-				render.text(v195, pos + vector(v910, 7), color(255, value), nil, v901)
-				render.text(v195, pos + vector(v907.x - n17 * 2, 7), color(255, value), "r", v902)
-
-				local v911 = pos + vector(v910, 24)
-				local v912 = vector(v907.x - v910 - n17 * 2, 2)
-
-				render.rect(v911, v911 + v912, color(0, 0, 0, value * 0.5), 1)
-
-				local v913 = v912.x * n34
-
-				v234:update(0.1, v913)
-				render.rect(v911, v911 + vector(v234.value, v912.y), v898:alpha_modulate(value), 1)
-				p183:set_size(v907)
-				p183:set_rules({
-					[1] = {
-						horizontal = true,
-						pos = vector(v28.x / 2, v28.y / 2)
-					}
-				})
-
-				return
-			end
-		end
-
-		smoothy.new(0)
-
-		function t59.render()
-		end
-		function t59.level_init()
-			-- upvalues: t62 (copy)
-			t62.level_init()
-		end
-		function t59.level_shutdown()
-			-- upvalues: t62 (copy)
-			t62.level_shutdown()
-		end
-
-		t64 = {}
-
-		local in_game = settings.in_game
-		local v238 = render.load_font("Calibri Bold", vector(25, 23.5, -0.4), "a")
-		local v239 = render.load_image_from_file("materials\\panorama\\images\\icons\\ui\\bomb_c4.svg")
-		local sv_maxunlag = cvar.sv_maxunlag
-		local t65 = {}
-
-		local function v242(p184, p185, p186, p187, p188, p189, p190)
-			return (p187 - p184) * p190 + p184, (p188 - p185) * p190 + p185, (p189 - p186) * p190 + p186
-		end
-		local function v243()
-			-- upvalues: sv_maxunlag (copy), t18 (copy)
-			local v922 = utils.net_channel()
-
-			if v922 ~= nil then
-				local v923 = sv_maxunlag:float()
-				local v924 = t18.misc.other.fake_latency:get()
-				local v925 = (v922.sequence_nr[0] + v922.sequence_nr[1]) / math.clamp(v924 * 0.001, 0.001, v923)
-
-				return math.clamp(v925, 0, 1)
-			end
-
-			return nil
-		end
-
-		local t66 = {
-			hits = 0,
-			misses = 0
-		}
-
-		local function v245()
-			-- upvalues: t66 (ref)
-			local v926 = t66.hits + t66.misses
-
-			if v926 ~= 0 then
-				return math.floor(t66.hits / v926 * 100)
-			end
-
-			return 100
-		end
-
-		function t64.update(_, p192)
-			-- upvalues: t66 (ref)
-			t66[p192] = t66[p192] + 1
-		end
-		function t64.reset(_)
-			-- upvalues: t66 (ref)
-			t66 = {
-				hits = 0,
-				misses = 0
-			}
-		end
-		function t64.add(_, p195, p196, p197, p198)
-			-- upvalues: v238 (copy), t65 (ref), v28 (copy)
-			if not p196 then
-				p196 = color(255, 200)
-			end
-
-			local v935 = render.measure_text(v238, "", p195)
-			local v936 = #t65 == 0 and v28.y - 350 or t65[#t65].offset - (v935.y + 11) - 8
-
-			table.insert(t65, {
-				text = p195,
-				color = p196,
-				offset = v936,
-				size = v935,
-				is_bomb = p197,
-				pct = p198
-			})
-		end
-		function t64.render(_)
-			-- upvalues: t65 (ref), v238 (copy), v239 (copy)
-			for _, v in ipairs(t65) do
-				local v940 = vector(0, v.offset)
-				local is_bomb = v.is_bomb
-				local v942 = v940 + vector(28, 8.5)
-
-				if is_bomb then
-					v942 = v942 + vector(38)
-				end
-
-				local n36 = 56
-
-				if is_bomb then
-					n36 = n36 + 38
-				end
-
-				if v.pct ~= nil then
-					n36 = n36 + 18
-				end
-
-				local v944 = vector(v.size.x + n36, v.size.y + 11)
-				local v945 = vector(v944.x * 0.5, v944.y)
-				local v946 = color(0, 0)
-				local v947 = color(0, 51)
-				local v948 = color(0, 128)
-
-				render.gradient(v940, v940 + v945, v946, v947, v946, v947)
-				render.gradient(v940 + vector(v945.x, 0), v940 + v944, v947, v946, v947, v946)
-				render.text(v238, v942 + vector(1, 1), v948, nil, v.text)
-				render.text(v238, v942, v.color, nil, v.text)
-
-				if is_bomb then
-					render.texture(v239, v940 + vector(29, 2), vector(v239.width, v239.height - 3), v.color)
-				end
-
-				if v.pct ~= nil then
-					local v949 = v940 + vector(v944.x - 29, v.size.y / 2 + 5)
-
-					render.circle_outline(v949, color(0, 200), 10, 0, 1, 4)
-					render.circle_outline(v949, color(255, 255), 9.5, 361, v.pct, 3)
-				end
-			end
-
-			t65 = {}
-		end
-
-		u37.render:set(function()
-			-- upvalues: t64 (copy)
-			local v950 = entity.get_local_player()
-
-			if v950 and v950:is_alive() then
-				t64:render()
-
-				return
-			end
-		end)
-		u37.render:set(function()
-			-- upvalues: in_game (copy), v242 (copy), v243 (copy), t18 (copy), settings (copy), v194 (copy), t64 (copy), t15 (copy), v245 (copy)
-			local v951 = entity.get_local_player()
-
-			if v951 and v951:is_alive() then
-				local skeet_indicators = in_game.skeet_indicators
-				local selected = skeet_indicators.selected
-
-				if skeet_indicators:get() then
-					local v954, v955, v956 = color(255, 255, 255):to_hsv()
-					local v957, v958, v959 = color(151, 175, 54):to_hsv()
-					local v960 = color()
-					local v961, v962, v963 = v242(v954, v955, v956, v957, v958, v959, v243())
-
-					v960:as_hsv(v961, v962, v963, 200)
-
-					local v964 = not (t18.misc.other.fake_latency:get() <= 0)
-					local v965 = t18.ragebot.dormant_aimbot:get() or settings.rage.dormant_aimbot:get()
-					local v966 = t18.anti_aim.other.fake_duck:get()
-					local v967 = t18.ragebot.double_tap:get()
-					local v968 = t18.ragebot.hide_shots:get()
-					local v969 = t18.anti_aim.angles.freestanding:get() or t18.anti_aim.angles.freestanding:get_override()
-					local v970 = t18.ragebot.safety.safe_points:get() == "Force" and v194("Safe Points")
-					local v971 = t18.ragebot.safety.body_aim:get() == "Force" and v194("Body Aim")
-					local v972 = v194("Min. Damage")
-
-					if v964 and selected:get("Fake Latency") then
-						t64:add("PING", v960)
-					end
-
-					if not v966 or not selected:get("Fake Duck") then
-						if not v967 or not selected:get("Double Tap") then
-							if v968 and selected:get("Hide Shots") then
-								t64:add("OSAA")
-							end
-						else
-							t64:add("DT", rage.exploit:get() == 1 and color(255, 200) or color(255, 0, 50, 255))
-						end
-					else
-						t64:add("DUCK")
-					end
-
-					if v971 and selected:get("Body Aim") then
-						t64:add("BA")
-					end
-
-					if v970 and selected:get("Safe Points") then
-						t64:add("SP")
-					end
-
-					if v972 and selected:get("Minimum Damage") then
-						t64:add("MD")
-					end
-
-					if v969 and selected:get("Freestanding") then
-						t64:add("FS")
-					end
-
-					if selected:get("Bomb Info") then
-						local planting = t15.planting
-						local planted = t15.planted
-
-						if planting.time > 0 then
-							t64:add(planting.site, color(252, 243, 105, 255), true, 1 - planting.remaining)
-						end
-
-						if planted.time > 0 and planted.time - globals.curtime >= 0 then
-							t64:add(string.format("%s - %.1fs", planted.site, planted.time - globals.curtime), color(255, 200), true)
-
-							local v975 = t15:get_damage(v951, entity.get_entities("CPlantedC4", true)[1])
-
-							if v975 > 0 then
-								local v976 = not (v975 < v951.m_iHealth)
-								local v977 = v976 and "FATAL" or string.format("-%d HP", v975)
-								local v978 = v976 and color(255, 0, 50, 255) or color(252, 243, 105, 255)
-
-								t64:add(v977, v978)
-							end
-
-							if planted.defuse_remaining > 0 then
-								local v979 = render.screen_size()
-								local n37 = 20
-								local defuse_remaining = planted.defuse_remaining
-								local v982 = not (planted.defuse_countdown > planted.time) and color(64, 200, 70, 160) or color(255, 0, 0, 125)
-
-								render.rect(vector(), vector(n37, v979.y), color(0, 110))
-								render.rect(vector(1, 1 + v979.y * (1 - defuse_remaining)), vector(n37, v979.y) - 1, v982)
-							end
-						end
-					end
-
-					if selected:get("Hit Rate") then
-						t64:add(string.format("%d%%", v245()))
-					end
-
-					if v965 and selected:get("Dormant Aimbot") then
-						t64:add("DA")
-					end
-
-					return
-				end
-
-				return
-			end
-		end)
-		t67 = {}
-
-		local aspect_ratio = settings.in_game.aspect_ratio
-		local evaluate = aspect_ratio.evaluate
-		local n38 = 0
-		local r_aspectratio = cvar.r_aspectratio
-
-		function t67.net_update_end()
-			-- upvalues: aspect_ratio (copy), n38 (ref), r_aspectratio (copy), evaluate (copy)
-			if aspect_ratio:get() then
-				if n38 ~= evaluate:get() then
-					r_aspectratio:float(evaluate:get() / 100, true)
-					n38 = evaluate:get()
-				end
-
-				return
-			end
-
-			if n38 ~= 0 then
-				r_aspectratio:float(0, true)
-				n38 = 0
-			end
-		end
-		function t67.shutdown()
-			-- upvalues: r_aspectratio (copy)
-			r_aspectratio:float(0, true)
-		end
-	end
-
-	t68 = {}
-
-	local viewmodel = settings.in_game.viewmodel
-	local viewmodel_fov = cvar.viewmodel_fov
-	local viewmodel_offset_x = cvar.viewmodel_offset_x
-	local viewmodel_offset_y = cvar.viewmodel_offset_y
-	local viewmodel_offset_z = cvar.viewmodel_offset_z
-	local cl_righthand = cvar.cl_righthand
-	local t69 = {
-		fov = tonumber(viewmodel_fov:string()),
-		x = tonumber(viewmodel_offset_x:string()),
-		y = tonumber(viewmodel_offset_y:string()),
-		z = tonumber(viewmodel_offset_z:string()),
-		righthand = tonumber(cl_righthand:string())
-	}
-	local t70 = {
-		fov = t69.fov,
-		x = t69.x,
-		y = t69.y,
-		z = t69.z,
-		righthand = t69.righthand
-	}
-	local v260 = smoothy.new(t69.fov)
-	local v261 = smoothy.new(t69.x)
-	local v262 = smoothy.new(t69.y)
-	local v263 = smoothy.new(t69.z)
-
-	local function v264(p200)
-		-- upvalues: t70 (copy), viewmodel_fov (copy), viewmodel_offset_x (copy), viewmodel_offset_y (copy), viewmodel_offset_z (copy)
-		if p200.fov ~= t70.fov then
-			viewmodel_fov:float(p200.fov, true)
-			t70.fov = p200.fov
-		end
-
-		if p200.x ~= t70.x then
-			viewmodel_offset_x:float(p200.x, true)
-			t70.x = p200.x
-		end
-
-		if p200.y ~= t70.y then
-			viewmodel_offset_y:float(p200.y, true)
-			t70.y = p200.y
-		end
-
-		if p200.z ~= t70.z then
-			viewmodel_offset_z:float(p200.z, true)
-			t70.z = p200.z
-		end
-	end
-	local function v265()
-		-- upvalues: viewmodel (copy), v260 (copy), t69 (copy), v261 (copy), v262 (copy), v263 (copy), v264 (copy)
-		local value = viewmodel.value
-		local t71 = {
-			fov = v260:update(0.05, value and viewmodel.fov.value * 0.1 or t69.fov),
-			x = v261:update(0.05, value and viewmodel.x.value * 0.1 or t69.x),
-			y = v262:update(0.05, value and viewmodel.y.value * 0.1 or t69.y),
-			z = v263:update(0.05, value and viewmodel.z.value * 0.1 or t69.z)
-		}
-
-		v264(t71)
-	end
-
-	function t68.render()
-		-- upvalues: t69 (copy), viewmodel (copy), t70 (copy), cl_righthand (copy), v265 (copy)
-		local v986 = entity.get_local_player():get_player_weapon()
-		local righthand = t69.righthand
-
-		if v986 and (v986:get_classid() == 107 and viewmodel.opposite_knife_hand:get()) then
-			righthand = t69.righthand == 1 and 0 or 1
-		end
-
-		if righthand ~= t70.righthand then
-			cl_righthand:int(righthand, true)
-			t70.righthand = righthand
-		end
-
-		v265()
-	end
-	function t68.shutdown()
-		-- upvalues: v264 (copy), t69 (copy)
-		v264(t69)
-	end
-
-	t72 = {}
-
-	local fake_duck = settings.other.fake_duck
-	local n39 = 0
-
-	local function v269()
-		-- upvalues: n39 (ref)
-		if n39 >= 14 then
-			n39 = 0
-		end
-
-		n39 = n39 + 1
-	end
-	local function v270()
-		-- upvalues: t18 (copy)
-		t18.ragebot.hide_shots:override()
-		t18.ragebot.double_tap:override()
-	end
-
-	function t72.createmove_run(p201)
-		-- upvalues: fake_duck (copy), t19 (copy), t18 (copy)
-		if fake_duck:get("Unlock speed") then
-			local v989 = entity.get_local_player()
-
-			if v989 and v989:is_alive() then
-				if t19.is_onground and t18.anti_aim.other.fake_duck:get() then
-					p201.forwardmove = p201.forwardmove * 2
-					p201.sidemove = p201.sidemove * 2
-				end
-
-				return
-			end
-
-			return
-		end
-	end
-	function t72.createmove(p202)
-		-- upvalues: fake_duck (copy), t18 (copy), v270 (copy), v269 (copy), n39 (ref)
-		if fake_duck:get("Freeze time") and t18.anti_aim.other.fake_duck:get() then
-			if entity.get_local_player() then
-				local v991 = entity.get_game_rules()
-
-				if v991 ~= nil and v991.m_bFreezePeriod then
-					v269()
-					p202.in_duck = not (n39 <= 7)
-					p202.send_packet = n39 == 14
-					t18.ragebot.hide_shots:override(false)
-					t18.ragebot.double_tap:override(false)
-
-					return
-				end
-
-				return
-			end
-
-			return
-		end
-
-		v270()
-	end
-	function t72.override_view(p203)
-		-- upvalues: fake_duck (copy), t18 (copy)
-		if fake_duck:get("Freeze time") then
-			local v993 = entity.get_local_player()
-
-			if v993 and v993:is_alive() then
-				local v994 = entity.get_game_rules()
-
-				if v994 ~= nil and v994.m_bFreezePeriod then
-					if t18.anti_aim.other.fake_duck:get() then
-						p203.camera.z = v993:get_origin().z + 64
-
-						return
-					end
-
-					return
-				end
-
-				return
-			end
-
-			return
-		end
-	end
-	function t72.shutdown()
-		-- upvalues: v270 (copy)
-		v270()
-	end
-
-	t73 = {}
-
-	local v272 = ffi.load("user32")
-	local game_focus = settings.features.game_focus
-
-	ffi.cdef("            typedef void* HWND;\n            typedef int BOOL;\n            BOOL FlashWindow(HWND hWnd, BOOL bInvert);\n            HWND GetForegroundWindow(void);\n            BOOL SetForegroundWindow(HWND hWnd);\n        ")
-
-	local v274 = utils.opcode_scan("engine.dll", "8B 0D ?? ?? ?? ?? 85 C9 74 16 8B 01 8B", 2) or (function(p204)
-		-- upvalues: v33 (copy), t5 (copy)
-		v33("\f<triangle-exclamation>", "Error", p204)
-		t5.failure()
-	end)("invalid signature")
-	local v275 = ffi.cast("void**", ffi.cast("char*", ffi.cast("void***", v274)[0][0]) + 8)[0]
-
-	function t73.round_start()
-		-- upvalues: game_focus (copy), v272 (copy), v275 (copy)
-		if game_focus:get() then
-			if v272.GetForegroundWindow() ~= v275 then
-				if game_focus.flash:get() then
-					v272.FlashWindow(v275, true)
-				end
-
-				if game_focus.focus:get() then
-					v272.SetForegroundWindow(v275)
-				end
-
-				return
-			end
-
-			return
-		end
-	end
-
-	t74 = {}
-
-	local fast_ladder = settings.features.fast_ladder
-
-	local function v278()
-		-- upvalues: t19 (copy)
-		if t19.movetype == 9 then
-			if not t19.is_onground then
-				return true
-			end
-
-			return false
-		end
-
-		return false
-	end
-	local function v279(p205)
-		if p205:get_weapon_info().weapon_type == 9 then
-			if p205.m_fThrowTime ~= 0 then
-				return true
-			end
-
-			return false
-		end
-	end
-
-	function t74.createmove(p206)
-		-- upvalues: fast_ladder (copy), v278 (copy), v279 (copy), normalize_yaw (copy), clamp (copy), abs (copy)
-		if fast_ladder.value then
-			if v278() then
-				local v997 = entity.get_local_player()
-
-				if v997 then
-					local v998 = v997:get_player_weapon()
-
-					if v998 ~= nil and not v279(v998) then
-						local m_vecLadderNormal = v997.m_vecLadderNormal
-
-						if m_vecLadderNormal:lengthsqr() ~= 0 then
-							local v1000 = render.camera_angles()
-							local v1001 = m_vecLadderNormal:angles()
-							local v1002 = v1001.y - v1000.y + 180
-							local v1003 = v1001.x - v1000.x
-							local v1004 = normalize_yaw(v1002)
-							local v1005 = clamp(v1003, -89, 89)
-							local v1006 = abs(v1004)
-							local n40 = 89
-							local n41 = -90
-							local v1009 = not (v1005 >= -45)
-							local v1010 = not (v1004 <= 0)
-							local v1011 = not (p206.sidemove <= 0)
-							local v1012 = not (p206.forwardmove <= 0)
-
-							if not (v1006 > 70) or not (v1006 < 135) then
-								if p206.sidemove == 0 and p206.forwardmove ~= 0 then
-									if not v1010 then
-										n41 = -n41
-									end
-
-									if not v1009 then
-										v1012 = not v1012
-									end
-
-									p206.in_back = v1012 and 0 or 1
-									p206.in_forward = v1012 and 1 or 0
-
-									if not v1010 then
-										v1012 = not v1012
-									end
-
-									p206.in_moveleft = v1012 and 1 or 0
-									p206.in_moveright = v1012 and 0 or 1
-									p206.view_angles.x = n40
-									p206.view_angles.y = normalize_yaw(v1001.y + n41)
-
-									return
-								end
-
-								return
-							end
-
-							if p206.forwardmove == 0 and p206.sidemove ~= 0 then
-								if not v1010 then
-									n41 = -n41
-								end
-
-								if v1010 then
-									v1011 = not v1011
-								end
-
-								p206.in_back = v1011 and 1 or 0
-								p206.in_forward = v1011 and 0 or 1
-
-								if v1010 then
-									v1011 = not v1011
-								end
-
-								p206.in_moveleft = v1011 and 1 or 0
-								p206.in_moveright = v1011 and 0 or 1
-								p206.view_angles.x = n40
-								p206.view_angles.y = normalize_yaw(v1001.y + n41)
-
-								return
-							end
-
-							return
-						end
-
-						return
-					end
-
-					return
-				end
-
-				return
-			end
-
-			return
-		end
-	end
-
-	t75 = {}
-
-	local grenade_features = settings.features.grenade_features
-
-	local function v282()
-		local v1013 = entity.get_local_player()
-
-		if v1013 then
-			local v1014 = v1013:get_player_weapon()
-
-			if v1014 then
-				if v1014:get_weapon_info().weapon_type == 9 then
-					if not (v1014.m_fThrowTime < globals.curtime - to_time(globals.clock_offset)) then
-						return true
-					end
-
-					return false
-				end
-
-				return false
-			end
-
-			return
-		end
-	end
-
-	function t75.createmove(p207)
-		-- upvalues: grenade_features (copy), v282 (copy)
-		if grenade_features.throw_fix.value then
-			if v282() then
-				rage.exploit:allow_defensive(false)
-				p207.no_choke = true
-
-				return
-			end
-
-			return
-		end
-	end
-
-	t76 = {}
-
-	local grenade_features2 = settings.features.grenade_features
-	local auto_release = grenade_features2.auto_release
-	local u286 = nil
-	local n42 = -1
-
-	function t76.grenade_prediction(p208)
-		-- upvalues: u286 (ref), n42 (ref)
-		u286 = nil
-		n42 = -1
-
-		if p208.target ~= nil then
-			u286 = p208
-			n42 = globals.tickcount
-		end
-	end
-	function t76.createmove(p209)
-		-- upvalues: grenade_features2 (copy), auto_release (copy), n42 (ref), u286 (ref)
-		if grenade_features2:get() and auto_release.value and n42 ~= -1 and p209.tickcount == n42 and u286 ~= nil then
-			local v1018 = entity.get_local_player()
-
-			if v1018 then
-				local v1019 = v1018:get_player_weapon()
-
-				if v1019 and v1019.m_bPinPulled then
-					local type2 = u286.type
-
-					if type2 ~= "Frag" or not (u286.damage < grenade_features2.damage:get()) or u286.fatal then
-						if type2 ~= "Molly" or grenade_features2.molotov:get() then
-							p209.in_attack = 0
-							p209.in_attack2 = 0
-
-							return
-						end
-
-						return
-					end
-
-					return
-				end
-
-				return
-			end
-
-			return
-		end
-	end
-
-	t77 = {}
-
-	local grenade_features3 = settings.features.grenade_features
-	local super_toss = grenade_features3.super_toss
-	local n43 = 0.3
-
-	local function v292(p210, p211, p212, p213)
-		-- upvalues: v21 (copy), n43 (copy)
-		p210.x = p210.x - 10 + math.abs(p210.x) / 9
-
-		local v1025 = vector():angles(p210)
-		local v1026 = p213 * 1.25
-		local v1027 = math.clamp(p211 * 0.9, 15, 750)
-		local v1028 = math.clamp(p212, 0, 1)
-		local v1029 = v1027 * v21(n43, 1, v1028)
-		local v1030 = v1025
-
-		for _ = 1, 8 do
-			local v1032 = (v1030 * v1029 + v1026):length()
-
-			if v1032 < 0.001 then
-				break
-			end
-
-			local v1033 = (v1025 * v1032 - v1026) / v1029
-			local v1034 = v1033:length()
-
-			if not (v1034 < 0.001) then
-				v1030 = v1033 / v1034
-			else
-				v1030 = v1025
-			end
-		end
-
-		local v1035 = v1030:angles()
-
-		if not (v1035.x > -10) then
-			v1035.x = 1.125 * v1035.x + 11.25
-		else
-			v1035.x = 0.9 * v1035.x + 9
-		end
-
-		return v1035
-	end
-
-	function t77.createmove(p214)
-		-- upvalues: grenade_features3 (copy), super_toss (copy), v292 (copy)
-		if grenade_features3:get() and super_toss:get() then
-			local v1037 = entity.get_local_player()
-
-			if v1037 then
-				local v1038 = v1037:get_player_weapon()
-
-				if v1038 then
-					local v1039 = v1038:get_weapon_info()
-
-					if v1039 and v1039.weapon_type == 9 then
-						if v1038.m_fThrowTime >= globals.curtime - to_time(globals.clock_offset) and p214.jitter_move then
-							local v1040 = v1037:simulate_movement()
-
-							v1040:think()
-							p214.view_angles = v292(p214.view_angles, v1039.throw_velocity, v1038.m_flThrowStrength, v1040.velocity)
-
-							return
-						end
-
-						return
-					end
-
-					return
-				end
-
-				return
-			end
-
-			return
-		end
-	end
-	function t77.grenade_override_view(p215)
-		-- upvalues: grenade_features3 (copy), super_toss (copy), v292 (copy)
-		if grenade_features3:get() and super_toss:get() then
-			local v1042 = entity.get_local_player()
-
-			if v1042 then
-				local v1043 = v1042:get_player_weapon()
-
-				if v1043 then
-					local v1044 = v1043:get_weapon_info()
-
-					if v1044 then
-						p215.angles = v292(p215.angles, v1044.throw_velocity, v1043.m_flThrowStrength, p215.velocity)
-
-						return
-					end
-
-					return
-				end
-
-				return
-			end
-
-			return
-		end
-	end
-
-	t78 = {}
-
-	local unlock_latency = settings.other.unlock_latency
-	local sv_maxunlag = cvar.sv_maxunlag
-	local n44 = 0
-
-	function t78.render(_)
-		-- upvalues: unlock_latency (copy), n44 (ref), sv_maxunlag (copy)
-		if unlock_latency:get() then
-			if n44 ~= sv_maxunlag:float() then
-				sv_maxunlag:float(0.6, true)
-				n44 = 0.6
-			end
-
-			return
-		end
-
-		if n44 ~= sv_maxunlag:float() then
-			sv_maxunlag:float(0.2, true)
-			n44 = 0.2
-		end
-	end
-	function t78.shutdown()
-		-- upvalues: sv_maxunlag (copy)
-		sv_maxunlag:float(0.2, true)
-	end
-
-	local no_fall_damage = settings.other.no_fall_damage
-	local sv_gravity = cvar.sv_gravity
-	local v299 = utils.get_vfunc(76, "float*(__thiscall*)(void*)")
-	local v300 = utils.get_vfunc(77, "float*(__thiscall*)(void*)")
-
-	local function v301(p217, p218, p219)
-		-- upvalues: v299 (copy), v300 (copy)
-		local v1049 = v299(p217[0])
-		local v1050 = v300(p217[0])
-		local v1051 = vector(v1049[0], v1049[1], v1049[2])
-		local v1052 = vector(v1050[0], v1050[1], 54)
-		local v1053 = utils.trace_hull(p218, p218 - vector(0, 0, p219), v1051, v1052, p217, 1)
-
-		return v1053.fraction < 1 and (not v1053.start_solid and (not v1053.all_solid and not (v1053.plane.normal.z < 0.7))), v1053
-	end
-	local function v302(p220, p221)
-		-- upvalues: sv_gravity (copy)
-		local tickinterval = globals.tickinterval
-		local v1057 = sv_gravity:float() * tickinterval * 0.5
-
-		while p220 > 11 do
-			local v1058 = p221 - v1057
-			local v1059 = tickinterval * v1058
-
-			p221 = v1058 - v1057
-			p220 = p220 + v1059
-		end
-
-		return p221 <= -580 and not (p220 < 9)
-	end;
-
-	({}).createmove = function(p222)
-		-- upvalues: no_fall_damage (copy), v301 (copy), v302 (copy)
-		if no_fall_damage.value then
-			local v1061 = entity.get_local_player()
-			local v1062 = bit.band(v1061.m_fFlags, 1) == 1
-
-			if v1061.m_MoveType == 2 and not v1062 then
-				local v1063 = v1061:get_origin()
-
-				if bit.band(v1061.m_fFlags, 2) == 0 then
-					v1063.z = v1063.z + 9
-				end
-
-				local v1064, v1065 = v301(v1061, v1063, 1000)
-
-				if v1064 then
-					local v1066 = v1065.fraction * 1000
-					local z = v1061.m_vecVelocity.z
-
-					if not (z < 0) or v1066 >= 11 then
-						if v302(v1066, z) then
-							p222.in_duck = 1
-							p222.in_jump = 0
-
-							return
-						end
-
-						return
-					end
-
-					if z < -580 and v1066 > 9 then
-						p222.in_jump = 1
-						p222.in_duck = 0
-
-						return
-					end
-				end
-			end
-
-			return
-		end
-	end
-	t79 = {}
-
-	local air_collision = settings.other.air_collision
-	local v305 = ui.find("Miscellaneous", "Main", "Movement", "Air Strafe", "WASD Strafe")
-	local v306 = ui.find("Miscellaneous", "Main", "Movement", "Edge Jump")
-	local n45 = 450
-	local n46 = 46
-	local n47 = 36
-	local n48 = 20
-	local n49 = 33636363
-	local n50 = 536870912
-
-	function t79.createmove(p223)
-		-- upvalues: air_collision (copy), v306 (copy), n45 (copy), v305 (copy), n48 (copy), n47 (copy), n46 (copy), n49 (copy), n50 (copy)
-		if air_collision.value then
-			if not v306:get_override() and not v306:get() then
-				local v1069 = entity.get_local_player()
-
-				if v1069.m_MoveType == 2 then
-					if bit.band(v1069.m_fFlags, 1) ~= 1 then
-						if not p223.in_duck and not p223.in_speed then
-							local m_vecVelocity = v1069.m_vecVelocity
-							local m_vecMins = v1069.m_vecMins
-							local m_vecMaxs = v1069.m_vecMaxs
-							local v1073 = vector():angles(0, p223.view_angles.y)
-							local v1074 = v1073:vectors()
-							local n51 = 0
-							local n52 = 0
-
-							if p223.sidemove == 0 then
-								n51 = n45
-							end
-
-							if v305:get() then
-								n51 = p223.forwardmove == 0 and (p223.sidemove == 0 and n45) or p223.forwardmove
-								n52 = p223.sidemove
-							end
-
-							local v1077 = vector(v1073.x * n51 + v1074.x * n52, v1073.y * n51 + v1074.y * n52)
-
-							v1077:normalize()
-
-							local v1078 = v1069:get_origin()
-
-							v1078.z = v1078.z + n48
-							m_vecVelocity.z = 0
-							m_vecMaxs.z = n47
-
-							local v1079 = m_vecVelocity:normalized()
-
-							if not (v1079:dot(v1077) <= 0) then
-								local v1080 = v1078 + v1077 * n46
-								local v1081 = utils.trace_hull(v1078, v1080, m_vecMins, m_vecMaxs, v1069, n49)
-								local normal = v1081.plane.normal
-
-								if v1081:did_hit_world() then
-									if not (math.abs(normal.z) >= 0.1) then
-										if bit.band(v1081.contents, n50) ~= n50 then
-											if not v1081.entity:is_breakable() then
-												if v1079:dot(normal) < -0.85 then
-													v1079 = v1077
-												end
-
-												local v1083 = normal:vectors()
-
-												if v1083:dot(v1079) < 0 then
-													v1083 = v1083 * -1
-												end
-
-												p223.move_yaw = math.deg(math.atan2(v1083.y, v1083.x))
-												p223.forwardmove = n45
-												p223.sidemove = 0
-
-												return
-											end
-
-											return
-										end
-
-										return
-									end
-
-									return
-								end
-
-								return
-							end
-
-							return
-						end
-
-						return
-					end
-
-					return
-				end
-
-				return
-			end
-
-			return
-		end
-	end
-
-	t80 = {}
-
-	local scope_overlay = t18.world.main.override_zoom.scope_overlay
-	local v315 = smoothy.new(0)
-	local v316 = smoothy.new(0)
-
-	function t80.render()
-		-- upvalues: v28 (copy), settings (copy), v315 (copy), scope_overlay (copy), v316 (copy)
-		local v1084 = entity.get_local_player()
-		local v1085 = v28 * 0.5
-		local v1086 = settings.in_game.custom_scope:get() and (v1084 and (v1084:is_alive() and v1084.m_bIsScoped))
-
-		v315:update(0.05, v1086 and 1 or 0)
-		scope_overlay:override(settings.in_game.custom_scope:get() and "Remove All" or nil)
-
-		if not (v315.value < 0.11) then
-			local value = v315.value
-			local v1088 = settings.in_game.custom_scope.offset:get() * value
-			local v1089 = settings.in_game.custom_scope.length:get() * value
-
-			v316:update(0.05, common.is_button_down(9) and 120 or 255)
-
-			local value3 = v316.value
-			local v1091 = settings.in_game.custom_scope.inverter.color:get()
-			local v1092 = settings.in_game.custom_scope.inverter:get()
-			local v1093 = v1091:alpha_modulate(v1092 and 0 or math.round(value3))
-			local v1094 = v1091:alpha_modulate(v1092 and math.round(255) or 0)
-
-			render.gradient(v1085 + vector(v1088 + 1, 0), v1085 + vector(v1088 + v1089 + 1, 1), v1093, v1094, v1093, v1094)
-			render.gradient(v1085 - vector(v1088, 0), v1085 - vector(v1088 + v1089, -1), v1093, v1094, v1093, v1094)
-			render.gradient(v1085 + vector(0, v1088 + 1), v1085 + vector(1, v1088 + v1089 + 1), v1093, v1093, v1094, v1094)
-			render.gradient(v1085 - vector(0, v1088), v1085 - vector(-1, v1088 + v1089), v1093, v1093, v1094, v1094)
-
-			return
-		end
-	end
-end
-
-local t81 = {}
-local screen_indicator = settings.indicators.screen_indicator
-local glow = screen_indicator.glow
-local style = settings.style
-local v321 = smoothy.new(0)
-local v322 = smoothy.new(0)
-
-color(0, 0, 0, 150)
-
-local v323 = t9.new("Crosshair"):set_pos(v28.y / 2 + 15, "y"):update(true)
-local n53 = 5
-local t82 = {
-	[1] = "standing",
-	[2] = "moving",
-	[3] = "slowwalk",
-	[4] = "ducking",
-	[5] = "sneaking",
-	[6] = "in air",
-	[7] = "in air&c"
-}
-local t83 = {
-	[1] = {
-		font = 4,
-		text = function()
-			-- upvalues: style (copy), v23 (copy), t2 (copy)
-			local v1095 = style.accent:get():alpha_modulate(255)
-			local v1096 = color(50, 200)
-			local v1097 = globals.realtime * 1.5
-
-			return v23(t2.name, v1097, v1095, v1096)
-		end,
-		alpha = smoothy.new(0),
-		update = function(p224)
-			return p224.alpha:update(0.05, 1)
-		end
-	},
-	[2] = {
-		font = 2,
-		text = function(_)
-			-- upvalues: t50 (copy), t82 (copy)
-			local v1100 = t50.get_statement()
-			local v1101 = v1100 > 1 and t82[v1100 - 1] or "dead"
-
-			return string.format("* %s *", string.upper(v1101))
-		end,
-		alpha = smoothy.new(0),
-		update = function(p226)
-			return p226.alpha:update(0.05, 1)
-		end
-	},
-	[3] = {
-		font = 2,
-		text = function()
-			return "DUCK"
-		end,
-		alpha = smoothy.new(0),
-		update = function(p227)
-			-- upvalues: t18 (copy)
-			return p227.alpha:update(0.05, t18.anti_aim.other.fake_duck:get() and 1 or 0)
-		end
-	},
-	[4] = {
-		circle = true,
-		font = 2,
-		text = function()
-			return "DT"
-		end,
-		alpha = smoothy.new(0),
-		update = function(p228)
-			-- upvalues: t18 (copy)
-			local v1105 = t18.ragebot.double_tap:get()
-
-			if t18.anti_aim.other.fake_duck:get() then
-				v1105 = false
-			end
-
-			return p228.alpha:update(0.05, v1105 and 1 or 0)
-		end,
-		progress_circle = function(_)
-			return rage.exploit:get()
-		end
-	},
-	[5] = {
-		font = 2,
-		text = function()
-			return "HS"
-		end,
-		alpha = smoothy.new(0),
-		update = function(p230)
-			-- upvalues: t18 (copy)
-			local v1108 = t18.ragebot.hide_shots:get()
-
-			if t18.anti_aim.other.fake_duck:get() or t18.ragebot.double_tap:get() then
-				v1108 = false
-			end
-
-			return p230.alpha:update(0.05, v1108 and 1 or 0)
-		end
-	},
-	[6] = {
-		font = 2,
-		text = function()
-			return "BODY"
-		end,
-		alpha = smoothy.new(0),
-		update = function(p231)
-			-- upvalues: v194 (copy)
-			return p231.alpha:update(0.05, v194("Body Aim") and 1 or 0)
-		end
-	},
-	[7] = {
-		font = 2,
-		text = function()
-			return "SAFE"
-		end,
-		alpha = smoothy.new(0),
-		update = function(p232)
-			-- upvalues: v194 (copy)
-			return p232.alpha:update(0.05, v194("Safe Points") and 1 or 0)
-		end
-	},
-	[8] = {
-		font = 2,
-		text = function()
-			return "DMG"
-		end,
-		alpha = smoothy.new(0),
-		update = function(p233)
-			-- upvalues: v194 (copy)
-			return p233.alpha:update(0.05, v194("Min. Damage") and 1 or 0)
-		end
-	},
-	[9] = {
-		font = 2,
-		text = function()
-			return "FS"
-		end,
-		alpha = smoothy.new(0),
-		update = function(p234)
-			-- upvalues: v194 (copy)
-			return p234.alpha:update(0.05, v194("Freestanding") and 1 or 0)
-		end
-	}
-}
-
-local function v327(p235, p236, p237)
-	-- upvalues: style (copy), t83 (copy), n53 (copy), glow (copy)
-	if not (p236 < 0.01) then
-		local n54 = 0
-		local v1117 = style.accent:get()
-
-		for i = 1, #t83 do
-			local v1119 = t83[i]
-			local font = v1119.font
-			local value = v1119.alpha.value
-
-			if value > 0.01 then
-				local v1122 = v1119:text()
-				local v1123 = render.measure_text(font, nil, v1122)
-				local v1124 = math.round(255 * value * p236)
-				local v1125 = v1123
-				local n55 = 4
-				local n56 = 1
-
-				if v1119.circle then
-					v1125 = v1125 + vector(n55 * 2 + n56, 0)
-				end
-
-				local v1128 = p237 and n53 or -(v1125.x * 0.5)
-				local v1129 = vector(p235.x + v1128, p235.y + n54)
-
-				if i == 1 and glow:get() then
-					local v1130 = v1129 + vector(0, v1123.y * 0.5)
-
-					render.shadow(v1130, v1130 + vector(v1123.x, 0), v1117:alpha_modulate(v1124))
-				end
-
-				render.text(font, v1129, color(255, v1124), nil, v1122)
-
-				if v1119.circle then
-					local v1131 = v1119:progress_circle()
-					local v1132 = v1129 + vector(v1123.x + n56 + n55, v1123.y * 0.5)
-
-					render.circle_outline(v1132, color(0, v1124 * 0.8), n55, 0, 1, 2)
-					render.circle_outline(v1132, v1117:alpha_modulate(v1124), n55, 180, v1131, 1)
-				end
-
-				n54 = n54 + math.round((v1125.y - 2) * value)
-			end
-		end
-
-		return
-	end
-end
-local function v328()
-	-- upvalues: screen_indicator (copy), t19 (copy), v321 (copy), t83 (copy), v322 (copy)
-	local v1133 = entity.get_local_player()
-
-	if v1133 and v1133:is_alive() then
-		local v1134 = v1133:get_player_weapon()
-		local v1135 = v1134 and v1134:get_weapon_info()
-		local v1136 = v1135 and v1135.weapon_type or 0
-		local v1137 = screen_indicator:get() and 1 or 0
-
-		if v1136 == 9 then
-			v1137 = v1137 * 0.5
-		end
-
-		if t19.in_scoreboard then
-			v1137 = 0
-		end
-
-		local v1138 = v321:update(0.05, v1137)
-
-		if not (v1138 < 0.01) then
-			for i = 1, #t83 do
-				t83[i]:update()
-			end
-
-			v322:update(0.05, v1133.m_bIsScoped and 1 or 0)
-
-			return v1138, v322.value
-		end
-
-		return 0, 0
-	end
-
-	return 0, 0
-end
-
-function v323.render_callback(p238)
-	-- upvalues: v328 (copy), v323 (copy), v327 (copy), v28 (copy)
-	local v1141, v1142 = v328()
-
-	if not (v1141 < 0.01) then
-		v323.is_active = true
-
-		local v1143 = render.measure_text(4, nil, "nexus") + vector(0, 5)
-		local v1144 = v323:get_pos() + vector(v1143.x * 0.5, 0)
-
-		v327(v1144, v1141 * (1 - v1142), false)
-		v327(v1144, v1141 * v1142, true)
-		p238:set_min(vector(v28.x / 2, v28.y / 2 + 10))
-		p238:set_max(vector(v28.x / 2, v28.y / 2 + 120))
-		p238:set_rules({
-			[1] = {
-				horizontal = true,
-				pos = vector(v28.x / 2, v28.y / 2 + 10),
-				end_pos = vector(v28.x / 2, v28.y / 2 + 120)
-			}
-		})
-
-		if v28.x * 0.5 - v1143.x * 0.5 ~= p238.pos.x then
-			p238:set_pos(v28.x * 0.5 - v1143.x * 0.5, "x")
-		end
-
-		p238:set_size(v1143)
-
-		return
-	end
-
-	v323.is_active = false
-end
-function t81.render()
-end
-
-local t84 = {}
-local keep_transparency = settings.in_game.keep_transparency
-local v331 = pui.find("Visuals", "Players", "Self", "Chams", "Model", {
-	transparency = "Transparency"
-})
-
-function t84.localplayer_transparency(p239)
-	-- upvalues: keep_transparency (copy), v331 (copy)
-	local v1146 = entity.get_local_player()
-
-	if v1146 then
-		if keep_transparency:get() then
-			if not v331:get() then
-				if v331.transparency:get("In scope") then
-					local v1147 = v1146:get_player_weapon()
-
-					if v1147 then
-						local m_zoomLevel = v1147.m_zoomLevel
-
-						if m_zoomLevel and m_zoomLevel ~= 0 then
-							return 59
-						end
-
-						return
-					end
-
-					return
-				end
-
-				return p239
-			end
-
-			return p239
-		end
-
-		return p239
-	end
-end
-
-local t85 = {}
-local manual_arrows = settings.indicators.manual_arrows
-local n57 = 45
-local v335 = render.load_font("Verdana", 20, "abd")
-local v336 = render.load_font("Verdana", 27, "ab")
-local v337 = smoothy.new(0)
-local v338 = smoothy.new(0)
-local v339 = smoothy.new(0)
-local v340 = smoothy.new(0)
-
-function t85.render()
-	-- upvalues: manual_arrows (copy), t27 (copy), v337 (copy), v338 (copy), v339 (copy), v340 (copy), v28 (copy), settings (copy), v335 (copy), n57 (copy), v336 (copy)
-	if manual_arrows:get() then
-		local v1149 = entity.get_local_player()
-
-		if v1149 and v1149:is_alive() then
-			local v1150 = t27.anti_aimbot.general.manual_yaw:get()
-			local v1151 = v1150 == "Left"
-			local v1152 = v1150 == "Right"
-
-			v337:update(0.05, v1151 and 1 or 0)
-			v338:update(0.05, v1152 and 1 or 0)
-			v339:update(0.05, is_back and 1 or 0)
-			v340:update(0.05, v1149.m_bIsScoped and 1 or 0)
-
-			local v1153 = -20 * v340.value
-			local v1154 = v28 * 0.5 + vector(0, v1153)
-			local v1155 = manual_arrows.style:get()
-			local v1156 = settings.style.accent:get()
-
-			color(180, 180, 180, 0)
-
-			if v1155 ~= "Classic" then
-				if v1155 == "Modern" then
-					local v1157 = v336
-
-					if v337.value > 0.01 then
-						local value = v337.value
-						local s11 = "⮜"
-						local v1160 = render.measure_text(v1157, "s", s11)
-						local v1161 = v1156:alpha_modulate(math.round(255 * value))
-						local v1162 = vector(v1154.x - v1160.x - n57 + 1, v1154.y - v1160.y * 0.5 - 1)
-						local v1163 = vector(v1162.x + v1160.x * 0.5, v1154.y)
-
-						render.shadow(v1163, v1163, v1161, v1157.height + 4)
-						render.text(v1157, v1162, v1161, "s", s11)
-					end
-
-					if v338.value > 0.01 then
-						local value = v338.value
-						local s12 = "⮞"
-						local v1166 = render.measure_text(v1157, "s", s12)
-						local v1167 = v1156:alpha_modulate(math.round(255 * value))
-						local v1168 = vector(v1154.x + n57, v1154.y - v1166.y * 0.5 - 1)
-						local v1169 = vector(v1168.x + v1166.x * 0.5, v1154.y)
-
-						render.shadow(v1169, v1169, v1167, v1157.height + 4)
-						render.text(v1157, v1168, v1167, "s", s12)
-					end
-				end
-			else
-				local v1170 = v335
-
-				if v337.value > 0.01 then
-					local value = v337.value
-					local s13 = "<"
-					local v1173 = render.measure_text(v1170, "s", s13)
-					local v1174 = v1156:alpha_modulate(math.round(255 * value))
-					local v1175 = vector(v1154.x - v1173.x - n57 + 1, v1154.y - v1173.y * 0.5 - 1)
-
-					render.text(v1170, v1175, v1174, "s", s13)
-				end
-
-				if v338.value > 0.01 then
-					local value = v338.value
-					local s14 = ">"
-					local v1178 = render.measure_text(v1170, "s", s14)
-					local v1179 = v1156:alpha_modulate(math.round(255 * value))
-					local v1180 = vector(v1154.x + n57, v1154.y - v1178.y * 0.5 - 1)
-
-					render.text(v1170, v1180, v1179, "s", s14)
-				end
-			end
-
-			return
-		end
-
-		return
-	end
-end
-
-local damage_indicator = settings.indicators.damage_indicator
-local v342 = pui.find("Aimbot", "Ragebot", "Selection", "Min. Damage")
-local v343 = render.load_font("Verdana", 13, "ad")
-
-local function v344(p240)
-	if p240 then
-		local v1182 = p240:get_weapon_info()
-
-		if v1182 then
-			if v1182.weapon_type ~= 0 and not (v1182.weapon_type > 6) then
-				return true
-			end
-
-			return false
-		end
-
-		return false
-	end
-
-	return false
-end
-
-local v345 = t9.new("Damage Indicator"):set_pos(vector(v28.x / 2 + 8, v28.y / 2 - 8 - 12)):update(true)
-local v346 = smoothy.new(0)
-local v347 = smoothy.new(0)
-
-function v345.render_callback(p241)
-	-- upvalues: damage_indicator (copy), v344 (copy), v346 (copy), v343 (copy), v342 (copy), v347 (copy), v28 (copy)
-	local v1184 = entity.get_local_player()
-	local v1185 = v1184 and v1184:is_alive()
-	local v1186 = damage_indicator:get()
-	local v1187 = v1185 and v1186 and 1 or 0
-
-	if v1187 == 1 then
-		local v1188 = v1184:get_player_weapon()
-
-		if not v344(v1188) then
-			v1187 = 0
-		end
-	end
-
-	v346:update(0.05, v1187)
-
-	if not (v346.value < 0.1) then
-		local v1189 = damage_indicator.small:get() and 2 or v343
-		local v1190 = v342:get()
-		local v1191 = v347:update(0.05, v1190)
-		local v1192 = math.floor(v1191 + 0.5)
-
-		if damage_indicator.animated:get() then
-			v1190 = v1192
-		end
-
-		local str
-
-		if not (v1190 < 1) then
-			if not (v1190 > 100) then
-				str = tostring(v1190)
-			else
-				str = string.format("+%d", v1190 - 100)
-			end
-		else
-			str = "A"
-		end
-
-		local v1194 = render.measure_text(v1189, nil, str)
-		local v1195 = color():alpha_modulate(math.round(255 * v346.value))
-
-		render.text(v1189, p241.pos, v1195, nil, str)
-		p241.is_centered = false
-		p241.render_border = true
-		p241:set_min(vector(v28.x / 2 - 100, v28.y / 2 - 100))
-		p241:set_max(vector(v28.x / 2 + 100 - v1194.x, v28.y / 2 + 100 - v1194.y))
-		p241:set_size(v1194)
-
-		return
-	end
-end
-
-local t86 = {}
-local edge_stop = settings.other.edge_stop
-local v350 = pui.find("Miscellaneous", "Main", "Movement", "Edge Jump")
-
-function t86.createmove(p242)
-	-- upvalues: edge_stop (copy), v350 (copy)
-	if edge_stop:get() or edge_stop:get_override() then
-		if p242.in_jump or v350:get() or v350:get_override() then
-			return
-		end
-
-		local v1197 = entity.get_local_player()
-
-		if not v1197 then
-			return
-		end
-
-		local v1198 = v1197:simulate_movement()
-
-		v1198:think(4)
-
-		if v1198.velocity.z ~= 0 then
-			p242.block_movement = 2
-		end
-	end
-end
-
-local t87 = {}
-local v352 = pui.find("Aimbot", "Ragebot", "Main", "Peek Assist")
-local v353 = pui.find("Aimbot", "Ragebot", "Main", "Enabled", "Extended Backtrack")
-local edge_stop2 = settings.other.edge_stop
-local freestanding = t27.anti_aimbot.general.freestanding
-
-settings.rage.peek_assist:set_callback(function(p243)
-	-- upvalues: v352 (copy), v353 (copy), edge_stop2 (copy), freestanding (copy)
-	local v1200 = p243:get()
-
-	v352:override(v1200 and p243.behaviors:get("Quick Peek") or nil)
-	v353:override(v1200 and p243.behaviors:get("Extended Backtrack") or nil)
-	edge_stop2:override(v1200 and p243.behaviors:get("Edge Stop") or nil)
-	freestanding:override(v1200 and p243.behaviors:get("Freestanding") or nil)
-end)
-
-function t87.shutdown()
-	-- upvalues: v352 (copy), v353 (copy), edge_stop2 (copy)
-	v352:override()
-	v353:override()
-	edge_stop2:override()
-end
-
-local t88 = {}
-local n58 = -1
-local n59 = 1
-local t89 = {
-	[1] = {
-		scale = 3,
-		hitbox = "Head",
-		vec = vector(0, 0, 58)
-	},
-	[2] = {
-		scale = 6,
-		hitbox = "Chest",
-		vec = vector(0, 0, 50)
-	},
-	[3] = {
-		scale = 5,
-		hitbox = "Stomach",
-		vec = vector(0, 0, 40)
-	}
-}
-local v360 = pui.find("Aimbot", "Ragebot", "Selection", "Min. Damage")
-local dormant_aimbot = settings.rage.dormant_aimbot
-
-local function v362()
-	local t90 = {}
-	local v1202 = entity.get_player_resource()
-
-	for i = 1, globals.max_players do
-		local v1204 = entity.get(i)
-
-		if v1204 and v1202.m_bConnected[i] and v1204:is_enemy() and v1204:is_dormant() then
-			table.insert(t90, v1204)
-		end
-	end
-
-	return t90
-end
-local function v363(p244, p245, p246)
-	local v1208 = p244:to(p245):angles()
-	local v1209 = math.rad(v1208.y + 90)
-	local v1210 = vector(math.cos(v1209), math.sin(v1209), 0) * p246
-
-	return {
-		[1] = {
-			text = "Middle",
-			vec = p245
-		},
-		[2] = {
-			text = "Left",
-			vec = p245 + v1210
-		},
-		[3] = {
-			text = "Right",
-			vec = p245 - v1210
-		}
-	}
-end
-
-function t88.createmove(p247)
-	-- upvalues: dormant_aimbot (copy), n58 (ref), v362 (copy), n59 (ref), v360 (copy), t89 (copy), v363 (copy)
-	local v1212 = entity.get_local_player()
-
-	if v1212 and (v1212:is_alive() and dormant_aimbot:get()) then
-		local v1213 = v1212:get_player_weapon()
-
-		if v1213 then
-			local v1214 = v1213:get_weapon_info()
-
-			if v1214 then
-				local v1215 = v1213:get_inaccuracy()
-
-				if v1215 then
-					if not (globals.tickcount < n58) then
-						local v1216 = v1212:get_anim_state()
-
-						if v1216 and (not p247.in_jump or v1216.on_ground) then
-							local weapon_type = v1214.weapon_type
-
-							if weapon_type >= 1 and weapon_type <= 6 and not (v1213.m_iClip1 <= 0) then
-								local v1218 = v362()
-
-								if #v1218 ~= 0 then
-									local v1219 = dormant_aimbot.hitboxes:get()
-
-									n59 = globals.tickcount % #v1218 ~= 0 and n59 + 1 or 1
-
-									local v1220 = v1218[n59]
-
-									if v1220 then
-										local v1221 = v1220:get_bbox()
-										local v1222 = v1220:get_origin()
-										local m_flDuckAmount = v1220.m_flDuckAmount
-										local v1224 = dormant_aimbot.accuracy:get()
-										local v1225 = dormant_aimbot.damage:get() or v360:get()
-
-										if v1225 > 100 then
-											v1225 = v1225 - 100 + v1220.m_iHealth
-										end
-
-										local t91 = {}
-
-										for _, v in ipairs(t89) do
-											local vec = v.vec
-
-											if v.hitbox ~= "Head" then
-												if v.hitbox == "Chest" then
-													vec = vec - vector(0, 0, 4 * m_flDuckAmount)
-												end
-											else
-												vec = vec - vector(0, 0, 10 * m_flDuckAmount)
-											end
-
-											if #v1219 == 0 or (function(p248, p249)
-												for i = 1, #p248 do
-													if p249 == p248[i] then
-														return true
-													end
-												end
-
-												return false
-											end)(v1219, v.hitbox) then
-												table.insert(t91, {
-													vec = vec,
-													scale = v.scale,
-													hitbox = v.hitbox
-												})
-											end
-										end
-
-										local v1230 = v1212:get_eye_position()
-										local current = v1212:get_simulation_time().current
-
-										if (v1214.is_revolver and not (current <= v1213.m_flNextPrimaryAttack) or not (current <= math.max(v1212.m_flNextAttack, v1213.m_flNextPrimaryAttack, v1213.m_flNextSecondaryAttack))) and not (v1224 >= math.floor(v1221.alpha * 100) + 5) then
-											local vec = nil
-
-											for _, v in ipairs(t91) do
-												local v1235 = v363(v1230, v1222 + v.vec, v.scale)
-
-												for _, v3 in ipairs(v1235) do
-													local v1238, v1239 = utils.trace_bullet(v1212, v1230, v3.vec, function(p250)
-														-- upvalues: v1220 (copy)
-														return p250 == v1220
-													end)
-
-													if v1239 and not v1239:is_visible() and v1238 ~= 0 and v1225 < v1238 then
-														vec = v3.vec
-
-														break
-													end
-												end
-
-												if vec then
-													break
-												end
-											end
-
-											if vec then
-												local v1240 = v1230:to(vec):angles()
-
-												p247.block_movement = 1
-
-												if dormant_aimbot.auto_scope:get() and not v1212.m_bIsScoped and not v1212.m_bResumeZoom and v1214.weapon_type == 5 and v1216.on_ground then
-													p247.in_attack2 = true
-												end
-
-												if v1215 < 0.01 then
-													p247.view_angles = v1240
-													p247.in_attack = true
-												end
-
-												return
-											end
-
-											return
-										end
-
-										return
-									end
-
-									return
-								end
-
-								return
-							end
-
-							return
-						end
-
-						return
-					end
-
-					return
-				end
-
-				return
-			end
-
-			return
-		end
-
-		return
-	end
-end
-function t88.round_start()
-	-- upvalues: n58 (ref)
-	n58 = globals.tickcount
-end
-
-local t92 = {}
-local style2 = t27.settings.style
-local t93 = {}
-local logs = settings.rage.logs
-local display = logs.display
-local n60 = 5
-local v370 = t9.new("Aimbot Logs"):set_pos(vector(n60, n60)):update(true)
-local t94 = {
-	[0] = "generic",
-	[1] = "head",
-	[2] = "chest",
-	[3] = "stomach",
-	[4] = "left arm",
-	[5] = "right arm",
-	[6] = "left leg",
-	[7] = "right leg",
-	[8] = "neck",
-	[9] = "generic",
-	[10] = "gear"
-}
-
-local function v372(p251)
-	return p251:to_hex()
-end
-
-function t92.add(_, p253, p254, p255)
-	-- upvalues: v22 (copy), t93 (copy), smoothy (copy), pui (copy)
-	if v22(p254, "Screen") then
-		if #t93 >= 10 then
-			table.remove(t93, #t93)
-		end
-
-		t93[#t93 + 1] = {
-			time = 4,
-			text = p253.text,
-			init_time = common.get_unixtime(),
-			alpha = smoothy.new(0),
-			accent = p255
-		}
-	end
-
-	local v1246 = pui.string(string.format("\a%s%s \a646464ff» \r%s", p255:alpha_modulate(255):to_hex(), "nexus", p253.text_console))
-
-	if v22(p254, "Events") then
-		print_dev(p253.text_console)
-	end
-
-	if v22(p254, "Console") then
-		print_raw(v1246)
-	end
-end
-
-local t95 = {
-	[1] = {
-		type = "Hit",
-		time = -1,
-		text = "Killed \a%s" .. common.get_username() .. " \rin the \a%shead",
-		alpha = smoothy.new(0)
-	},
-	[2] = {
-		type = "Miss",
-		text = "Missed at \a%ssqwat\r's \a%shead \rdue to \a%sspread",
-		time = -1,
-		alpha = smoothy.new(0)
-	}
-}
-
-function t92.aim_ack(p256)
-	-- upvalues: logs (copy), t94 (copy), v372 (copy), t92 (copy), display (copy)
-	if logs:get() then
-		local target = p256.target
-
-		if target then
-			local v1249 = target:get_name()
-			local v1250 = p256.damage or 0
-			local v1251 = p256.wanted_damage or 0
-			local v1252 = t94[p256.hitgroup] or "?"
-			local v1253 = t94[p256.wanted_hitgroup] or "?"
-			local v1254 = p256.backtrack or 0
-			local v1255 = target.m_iHealth or 0
-			local v1256 = math.floor((p256.hitchance or 0) + 0.5)
-			local v1257 = p256.spread or 0
-			local state = p256.state
-			local clr = logs.clr
-
-			color():to_hex()
-
-			local v1260, v1261, v1262
-
-			if state then
-				v1260 = string.format("^0Missed at ^1%s^0's ^1%s^0 due to ^1%s^0 (^1%d^0 dmg)(hc: ^1%s^0%% spread: ^1%.2f^0° bt: ^1%d^0t)", v1249, v1253, state, v1251, v1256, v1257, v1254)
-				v1261 = string.format("Missed at ^1%s^0 due to ^1%s", v1249, state)
-				v1262 = clr:get("Miss")[1]
-			else
-				v1260 = string.format("^0Hit ^1%s^0's ^1%s^0(^1%s^0) for ^1%d^0(^1%d^0) damage %s(hc: ^1%s^0%% spread: ^1%.2f^0° bt: ^1%d^0t)", v1249, v1252, v1253, v1250, v1251, v1255 > 0 and string.format("(^1%s^0hp left)", v1255) or "", v1256, v1257, v1254)
-
-				if not (v1255 > 0) then
-					v1261 = string.format("Killed ^1%s^0 in ^1%s^0", v1249, v1252)
-				else
-					v1261 = string.format("Hit ^1%s^0's ^1%s ^0for ^1%d^0 damage (^1%s^0hp left)", v1249, v1252, v1250, v1255)
-				end
-
-				v1262 = clr:get("Hit")[1]
-			end
-
-			local v1263 = v1260:gsub("%^1", "\a" .. v372(v1262)):gsub("%^0", "\affffffff")
-			local v1264 = v1261:gsub("%^1", "\a" .. v372(v1262)):gsub("%^0", "\affffffff")
-
-			t92:add({
-				text = v1264,
-				text_console = v1263
-			}, display:get(), v1262)
-
-			return
-		end
-
-		return
-	end
-end
-
-local v374 = smoothy.new(0)
-
-function v370.render_callback(p257)
-	-- upvalues: t93 (copy), t95 (copy), logs (copy), display (copy), pui (copy), v195 (copy), n17 (copy), v21 (copy), n60 (copy), v374 (copy), floor (copy), u200 (ref), style2 (copy), v28 (copy)
-	local v1266 = t93
-
-	if #v1266 == 0 then
-		v1266 = t95
-	end
-
-	p257.is_active = ui.get_alpha() > 0 and (logs:get() and display:get("Screen"))
-
-	local v1267 = common.get_unixtime()
-	local n61 = 0
-
-	for _, v in pairs(v1266) do
-		local accent = v.accent
-		local text = v.text
-
-		if v.type then
-			accent = logs.clr:get(v.type)[1]:alpha_modulate(255)
-			text = pui.string(v.text:gsub("%%s", accent:to_hex()))
-		end
-
-		local v1273 = render.measure_text(v195, nil, text)
-
-		if v.time == -1 or not math.clamp(v.init_time + v.time - v1267, 0, v.time) then
-		end
-
-		local v1274
-
-		if v.time ~= -1 then
-			v1274 = math.clamp(v.init_time + v.time - v1267, 0, v.time) > 0 and 255 or 0
-		else
-			v1274 = logs:get() and display:get("Screen") and 255 or 0
-		end
-
-		local v1275 = math.clamp(v.alpha:update(0.075, v1274), 0, 255)
-
-		if v.time == -1 then
-			v1275 = v1275 * ui.get_alpha()
-		end
-
-		local v1276 = v1273.x + n17 * 2
-		local v1277 = v1273.y + n17 * 1.5
-		local v1278 = vector(v1276, v1277)
-		local v1279 = v21(p257.pos.x + n60, p257.pos.x + p257.size.x * 0.5 - v1278.x * 0.5, v374.value)
-		local v1280 = vector(math.round(v1279), floor(p257.pos.y + n60 + n61))
-
-		u200(v1280, v1278, v1275, accent, style2.accent:get().a / 255)
-		render.text(v195, v1280 + v1278 * 0.5, color(255, v1275), "c", text)
-
-		if v.time ~= -1 then
-			n61 = n61 + (v1277 + n17) * (v1275 / 255)
-		else
-			n61 = n61 + (v1277 + n17)
-		end
-	end
-
-	for k, v in pairs(v1266) do
-		if v.time ~= -1 and math.clamp(v.init_time + v.time - v1267, 0, v.time) <= 0 and v.alpha.value <= 0 then
-			table.remove(t93, k)
-		end
-	end
-
-	v374:update(0.05, p257.pos.x < v28.x / 3 and 0 or 1)
-	p257:set_rules({
-		[1] = {
-			horizontal = true,
-			pos = vector(p257.size.x * 0.5 + 10, 0)
-		},
-		[2] = {
-			horizontal = false,
-			pos = vector(10, 5 + p257.size.y * 0.5)
-		},
-		[3] = {
-			horizontal = true,
-			pos = v28 * 0.5
-		}
-	})
-	p257:set_size(vector(266, 46 + n60))
-end
-function t92.render()
-end
-function t58.render()
-	-- upvalues: t59 (copy), t78 (copy), t80 (copy), t81 (copy), t85 (copy), t92 (copy)
-	t59.render()
-	t78.render()
-	t80.render()
-	t81.render()
-	t85.render()
-	t92.render()
-end
-
-local t96 = {}
-local icon = settings.shared.icon
-local t97 = {
-	XOR_KEY = 1514880045,
-	SECURITY_KEY = "*v5_#fX9!zL2@mK8*",
-	AUTHOR = "emptyspotify",
-	DEV_ID = 1064967573,
-	ID = 1064967572
-}
-local t98 = {
-	user = "https://raw.githubusercontent.com/emptyspotify/icons/main/nexus.png",
-	dev = "https://raw.githubusercontent.com/emptyspotify/icons/main/nexus_dev.png"
-}
-local n62 = 0
-local t99 = {}
-
-local function v381()
-	-- upvalues: t99 (ref)
-	t99 = {}
-
-	local v1283 = entity.get_players(false, true)
-
-	for _, v in ipairs(v1283) do
-		v:set_icon()
-	end
-
-	local v1286 = entity.get_local_player()
-
-	if v1286 then
-		v1286:set_icon()
-	end
-end
-local function v382()
-	-- upvalues: u37 (ref), t97 (copy)
-	u37.voice_message:call(function(p258)
-		-- upvalues: t97 (copy)
-		p258:write_bits(t97.ID, 32)
-
-		if common.get_username() == t97.AUTHOR then
-			p258:write_bits(t97.DEV_ID, 32)
-		end
-
-		p258:crypt(t97.SECURITY_KEY)
-	end)
-end
-
-icon:set_callback(function(p259)
-	-- upvalues: v381 (copy)
-	if not p259:get() then
-		v381()
-	end
-end)
-
-function t96.render()
-	-- upvalues: icon (copy), t97 (copy), t98 (copy), n62 (ref), v382 (copy), t99 (ref)
-	if icon:get() then
-		local v1288 = entity.get_local_player()
-
-		if v1288 then
-			v1288:set_icon(common.get_username() == t97.AUTHOR and t98.dev or t98.user)
-
-			if math.abs(globals.realtime - n62) > 1 then
-				v382()
-				n62 = globals.realtime
-			end
-
-			local server_tick = globals.server_tick
-			local v1290 = entity.get_players(false, true)
-			local t100 = {}
-
-			for _, v in ipairs(v1290) do
-				local v1294 = v:get_xuid()
-
-				t100[v1294] = true
-
-				local v1295 = t99[v1294]
-
-				if v1295 then
-					if not (to_time(server_tick - v1295.last_heartbeat) > 3) then
-						v:set_icon(v1295.is_author and t98.dev or t98.user)
-					else
-						t99[v1294] = nil
-						v:set_icon()
-					end
-				end
-			end
-
-			for k, _ in pairs(t99) do
-				if not t100[k] then
-					t99[k] = nil
-				end
-			end
-
-			return
-		end
-
-		return
-	end
-end
-function t96.voice_message(p260)
-	-- upvalues: t97 (copy), t99 (ref)
-	local entity2 = p260.entity
-
-	if entity2 and entity2 ~= entity.get_local_player() then
-		local buffer = p260.buffer
-
-		buffer:crypt(t97.SECURITY_KEY)
-
-		local v1301 = buffer:read_bits(32)
-		local v1302 = buffer:read_bits(32) == t97.DEV_ID
-
-		if v1301 == t97.ID then
-			t99[entity2:get_xuid()] = {
-				last_heartbeat = globals.server_tick,
-				player = entity2,
-				is_author = v1302
-			}
-		end
-
-		return
-	end
-end
-function t96.shutdown()
-	local v1303 = entity.get_local_player()
-
-	if v1303 then
-		v1303:set_icon()
-
-		return
-	end
-end
-function t58.shutdown()
-	-- upvalues: t78 (copy), t68 (copy), t87 (copy), t72 (copy), t96 (copy), t67 (copy)
-	t78.shutdown()
-	t68.shutdown()
-	t87.shutdown()
-	t72.shutdown()
-	t96.shutdown()
-	t67.shutdown()
-end
-function t58.createmove_run(p261)
-	-- upvalues: t72 (copy)
-	t72.createmove_run(p261)
-end
-function t58.voice_message(p262)
-	-- upvalues: t96 (copy)
-	t96.voice_message(p262)
-end
-function t58.createmove(p263)
-	-- upvalues: t74 (copy), t75 (copy), t76 (copy), t79 (copy), t86 (copy), t88 (copy), t72 (copy)
-	t74.createmove(p263)
-	t75.createmove(p263)
-	t76.createmove(p263)
-	t79.createmove(p263)
-	t86.createmove(p263)
-	t88.createmove(p263)
-	t72.createmove(p263)
-end
-function t58.aim_ack(p264)
-	-- upvalues: t92 (copy), t64 (copy)
-	t92.aim_ack(p264)
-
-	if p264.state then
-		t64:update("misses")
-	else
-		t64:update("hits")
-	end
-end
-function t58.player_death(_)
-end
-function t58.round_start()
-	-- upvalues: t88 (copy), t73 (copy)
-	t88.round_start()
-	t73.round_start()
-end
-function t58.grenade_prediction(p266)
-	-- upvalues: t76 (copy)
-	t76.grenade_prediction(p266)
-end
-function t58.grenade_override_view(p267)
-	-- upvalues: t77 (copy)
-	t77.grenade_override_view(p267)
-end
-function t58.net_update_end()
-	-- upvalues: t67 (copy), t68 (copy), t96 (copy)
-	t67.net_update_end()
-	t68.render()
-	t96.render()
-end
-function t58.override_view(p268)
-	-- upvalues: t72 (copy)
-	t72.override_view(p268)
-end
-function t58.level_init()
-	-- upvalues: t59 (copy), t64 (copy)
-	t59.level_init()
-	t64:reset()
-end
-function t58.level_shutdown()
-	-- upvalues: t59 (copy)
-	t59.level_shutdown()
-end
-function t58.localplayer_transparency(p269)
-	-- upvalues: t84 (copy)
-	return t84.localplayer_transparency(p269)
-end
-
-u37.render(function()
-	-- upvalues: t58 (copy), t50 (copy)
-	t58.render()
-	t50.render()
-end)
-u37.createmove(function(p270)
-	-- upvalues: t19 (copy), t50 (copy), t58 (copy)
-	t19.createmove(p270)
-	t50.createmove(p270)
-	t58.createmove(p270)
-end)
-u37.voice_message(function(p271)
-	-- upvalues: t58 (copy)
-	t58.voice_message(p271)
-end)
-u37.override_view(function(p272)
-	-- upvalues: t58 (copy)
-	t58.override_view(p272)
-end)
-u37.aim_ack(function(p273)
-	-- upvalues: t58 (copy)
-	t58.aim_ack(p273)
-end)
-u37.player_death(function(p274)
-	-- upvalues: t58 (copy)
-	t58.player_death(p274)
-end)
-u37.round_start(function()
-	-- upvalues: t58 (copy)
-	t58.round_start()
-end)
-u37.run_command(function(p275)
-	-- upvalues: t19 (copy)
-	t19.run_command(p275)
-end)
-u37.net_update_end(function()
-	-- upvalues: t19 (copy), t58 (copy)
-	t19.net_update_end()
-	t58.net_update_end()
-end)
-u37.post_update_clientside_animation(function(p276)
-	-- upvalues: t50 (copy)
-	t50.post_update_clientside_animation(p276)
-end)
-u37.setup_command(function(p277)
-	-- upvalues: t19 (copy)
-	t19.setup_command(p277)
-end)
-u37.createmove_run(function(p278)
-	-- upvalues: t58 (copy)
-	t58.createmove_run(p278)
-end)
-u37.grenade_override_view(function(p279)
-	-- upvalues: t58 (copy)
-	t58.grenade_override_view(p279)
-end)
-u37.grenade_prediction(function(p280)
-	-- upvalues: t58 (copy)
-	t58.grenade_prediction(p280)
-end)
-u37.shutdown(function()
-	-- upvalues: t58 (copy), t50 (copy)
-	t58.shutdown()
-	t50.shutdown()
-end)
-u37.level_init(function()
-	-- upvalues: t58 (copy)
-	t58.level_init()
-end)
-u37.level_shutdown(function()
-	-- upvalues: t58 (copy)
-	t58.level_shutdown()
-end)
-u37.localplayer_transparency(function(p281)
-	-- upvalues: t58 (copy)
-	return t58.localplayer_transparency(p281)
-end)
-utils.execute_after(0.1, print_raw, string.format(pui.string("\vnexus\r loaded in \v%.2f\r ms"), (v1() - v89) * 1000))
+    local l_v12_0 = v12;
+    v11.get = function(v14)
+        -- upvalues: l_v12_0 (ref)
+        local v15 = l_v12_0[v14];
+        if v15 == nil then
+            v15 = ui.get_icon(v14);
+            l_v12_0[v14] = v15;
+        end;
+        return v15;
+    end;
+end;
+v12 = nil;
+v12 = {};
+local v16 = "ui\\beepclear.wav";
+local v17 = "resource\\warning.wav";
+local l_play_0 = cvar.play;
+local v19 = v8(string.lower(v9.name), "\aDEFAULT", " \194\183 ");
+do
+    local l_v16_0, l_v17_0, l_l_play_0_0, l_v19_0 = v16, v17, l_play_0, v19;
+    v12.success = function(v24)
+        -- upvalues: l_v19_0 (ref), l_l_play_0_0 (ref), l_v16_0 (ref)
+        v24 = "\aC0FF80FF" .. l_v19_0 .. v24;
+        print_raw(v24);
+        print_dev(v24);
+        l_l_play_0_0:call(l_v16_0);
+    end;
+    v12.error = function(v25)
+        -- upvalues: l_v19_0 (ref), l_l_play_0_0 (ref), l_v17_0 (ref)
+        v25 = "\aFF8080FF" .. l_v19_0 .. v25;
+        print_raw(v25);
+        print_dev(v25);
+        l_l_play_0_0:call(l_v17_0);
+    end;
+end;
+v16 = nil;
+v16 = {};
+v17 = {};
+l_play_0 = nil;
+do
+    local l_v17_1, l_l_play_0_1 = v17, l_play_0;
+    v16.bind = function(v28)
+        -- upvalues: l_l_play_0_1 (ref)
+        l_l_play_0_1 = v28;
+    end;
+    v16.push = function(v29, v30, v31)
+        -- upvalues: l_v17_1 (ref)
+        if l_v17_1[v29] == nil then
+            l_v17_1[v29] = {};
+        end;
+        l_v17_1[v29][v30] = v31;
+        return v31;
+    end;
+    v16.encode = function(v32)
+        -- upvalues: l_base64_0 (ref)
+        local l_status_0, l_result_0 = pcall(json.stringify, v32);
+        v32 = l_result_0;
+        success = l_status_0;
+        if not success then
+            return false, "Invalid JSON";
+        else
+            l_status_0, l_result_0 = pcall(l_base64_0.encode, v32);
+            v32 = l_result_0;
+            success = l_status_0;
+            if not success then
+                return false, "Invalid BASE64";
+            else
+                return true, v32;
+            end;
+        end;
+    end;
+    v16.decode = function(v35)
+        -- upvalues: l_base64_0 (ref)
+        local l_status_1, l_result_1 = pcall(l_base64_0.decode, v35);
+        v35 = l_result_1;
+        success = l_status_1;
+        if not success then
+            return false, "Invalid BASE64";
+        else
+            l_status_1, l_result_1 = pcall(json.parse, v35);
+            v35 = l_result_1;
+            success = l_status_1;
+            if not success then
+                return false, "Invalid JSON";
+            else
+                return true, v35;
+            end;
+        end;
+    end;
+    v16.import = function(v38)
+        -- upvalues: l_l_play_0_1 (ref), l_v17_1 (ref)
+        if v38 == nil then
+            return false, "Preset is empty!";
+        elseif type(v38) ~= "table" then
+            return false, "Preset is not valid!";
+        else
+            local v39 = 0;
+            for v40, v41 in pairs(v38) do
+                if l_l_play_0_1 == nil or l_l_play_0_1:get(v40) then
+                    local v42 = l_v17_1[v40];
+                    if v42 ~= nil then
+                        for v43, v44 in pairs(v41) do
+                            local v45 = v42[v43];
+                            if v45 ~= nil then
+                                if v45:type() == "color_picker" then
+                                    v44 = color(v44);
+                                end;
+                                pcall(v45.set, v45, v44);
+                            end;
+                        end;
+                        v39 = v39 + 1;
+                    end;
+                end;
+            end;
+            return true, v39;
+        end;
+    end;
+    v16.export = function()
+        -- upvalues: l_v17_1 (ref)
+        local v46 = {};
+        for v47, v48 in pairs(l_v17_1) do
+            local v49 = {};
+            for v50, v51 in pairs(v48) do
+                local v52 = v51:get();
+                if v51:type() == "color_picker" then
+                    v52 = v52:to_hex();
+                end;
+                v49[v50] = v52;
+            end;
+            v46[v47] = v49;
+        end;
+        return v46;
+    end;
+end;
+v17 = nil;
+v17 = {
+    rage = {
+        main = {
+            dormant_aimbot = ui.find("Aimbot", "Ragebot", "Main", "Enabled", "Dormant Aimbot"), 
+            hide_shots = ui.find("Aimbot", "Ragebot", "Main", "Hide Shots"), 
+            hide_shots_options = ui.find("Aimbot", "Ragebot", "Main", "Hide Shots", "Options"), 
+            double_tap = ui.find("Aimbot", "Ragebot", "Main", "Double Tap"), 
+            double_tap_lag_options = ui.find("Aimbot", "Ragebot", "Main", "Double Tap", "Lag Options"), 
+            peek_assist = {
+                ui.find("Aimbot", "Ragebot", "Main", "Peek Assist"), 
+                ui.find("Aimbot", "Ragebot", "Main", "Peek Assist", "Style"), 
+                ui.find("Aimbot", "Ragebot", "Main", "Peek Assist", "Auto Stop"), 
+                ui.find("Aimbot", "Ragebot", "Main", "Peek Assist", "Retreat Mode")
+            }
+        }, 
+        selection = {
+            hit_chance = ui.find("Aimbot", "Ragebot", "Selection", "Hit Chance"), 
+            min_damage = ui.find("Aimbot", "Ragebot", "Selection", "Min. Damage"), 
+            multipoint_scale = {
+                ui.find("Aimbot", "Ragebot", "Selection", "Multipoint", "Head Scale"), 
+                ui.find("Aimbot", "Ragebot", "Selection", "Multipoint", "Body Scale")
+            }
+        }, 
+        safety = {
+            body_aim = ui.find("Aimbot", "Ragebot", "Safety", "Body Aim"), 
+            safe_points = ui.find("Aimbot", "Ragebot", "Safety", "Safe Points")
+        }
+    }, 
+    antiaim = {
+        angles = {
+            enabled = ui.find("Aimbot", "Anti Aim", "Angles", "Enabled"), 
+            pitch = ui.find("Aimbot", "Anti Aim", "Angles", "Pitch"), 
+            yaw = ui.find("Aimbot", "Anti Aim", "Angles", "Yaw"), 
+            yaw_base = ui.find("Aimbot", "Anti Aim", "Angles", "Yaw", "Base"), 
+            yaw_offset = ui.find("Aimbot", "Anti Aim", "Angles", "Yaw", "Offset"), 
+            avoid_backstab = ui.find("Aimbot", "Anti Aim", "Angles", "Yaw", "Avoid Backstab"), 
+            hidden = ui.find("Aimbot", "Anti Aim", "Angles", "Yaw", "Hidden"), 
+            yaw_modifier = ui.find("Aimbot", "Anti Aim", "Angles", "Yaw Modifier"), 
+            modifier_offset = ui.find("Aimbot", "Anti Aim", "Angles", "Yaw Modifier", "Offset"), 
+            body_yaw = ui.find("Aimbot", "Anti Aim", "Angles", "Body Yaw"), 
+            inverter = ui.find("Aimbot", "Anti Aim", "Angles", "Body Yaw", "Inverter"), 
+            left_limit = ui.find("Aimbot", "Anti Aim", "Angles", "Body Yaw", "Left Limit"), 
+            right_limit = ui.find("Aimbot", "Anti Aim", "Angles", "Body Yaw", "Right Limit"), 
+            options = ui.find("Aimbot", "Anti Aim", "Angles", "Body Yaw", "Options"), 
+            freestanding_body_yaw = ui.find("Aimbot", "Anti Aim", "Angles", "Body Yaw", "Freestanding"), 
+            freestanding = ui.find("Aimbot", "Anti Aim", "Angles", "Freestanding"), 
+            disable_yaw_modifiers = ui.find("Aimbot", "Anti Aim", "Angles", "Freestanding", "Disable Yaw Modifiers"), 
+            body_freestanding = ui.find("Aimbot", "Anti Aim", "Angles", "Freestanding", "Body Freestanding"), 
+            extended_angles = ui.find("Aimbot", "Anti Aim", "Angles", "Extended Angles"), 
+            extended_pitch = ui.find("Aimbot", "Anti Aim", "Angles", "Extended Angles", "Extended Pitch"), 
+            extended_roll = ui.find("Aimbot", "Anti Aim", "Angles", "Extended Angles", "Extended Roll")
+        }, 
+        fake_lag = {
+            enabled = ui.find("Aimbot", "Anti Aim", "Fake Lag", "Enabled"), 
+            limit = ui.find("Aimbot", "Anti Aim", "Fake Lag", "Limit"), 
+            variability = ui.find("Aimbot", "Anti Aim", "Fake Lag", "Variability")
+        }, 
+        misc = {
+            fake_duck = ui.find("Aimbot", "Anti Aim", "Misc", "Fake Duck"), 
+            slow_walk = ui.find("Aimbot", "Anti Aim", "Misc", "Slow Walk"), 
+            leg_movement = ui.find("Aimbot", "Anti Aim", "Misc", "Leg Movement")
+        }
+    }, 
+    visuals = {
+        world = {
+            main = {
+                scope_overlay = ui.find("Visuals", "World", "Main", "Override Zoom", "Scope Overlay")
+            }
+        }
+    }, 
+    misc = {
+        main = {
+            in_game = {
+                clan_tag = ui.find("Miscellaneous", "Main", "In-Game", "Clan Tag")
+            }, 
+            other = {
+                windows = ui.find("Miscellaneous", "Main", "Other", "Windows"), 
+                log_events = ui.find("Miscellaneous", "Main", "Other", "Log Events"), 
+                fake_latency = ui.find("Miscellaneous", "Main", "Other", "Fake Latency")
+            }
+        }
+    }
+};
+l_play_0 = nil;
+l_play_0 = {};
+v19 = 1;
+local v53 = 2;
+local function v55(v54)
+    -- upvalues: v3 (ref)
+    return string.rep(v3, v54);
+end;
+local function v59(v56, v57)
+    -- upvalues: v3 (ref)
+    local v58 = string.rep(v3, v57);
+    return v58 .. v56 .. v58;
+end;
+local function v62(v60, v61)
+    if string.find(v60, "##") == nil then
+        v60 = v60 .. "##";
+    end;
+    return v60 .. v61;
+end;
+local function v65(v63, v64)
+    -- upvalues: v8 (ref), v11 (ref)
+    return v8(v64 or "\a{Link Active}", v11.get(v63), "\aDEFAULT");
+end;
+do
+    local l_v55_0, l_v59_0, l_v62_0, l_v65_0 = v55, v59, v62, v65;
+    local function v72(v70, v71)
+        -- upvalues: v8 (ref), l_v55_0 (ref)
+        return v8(l_v55_0(1), v71 or "\a{Link Active}", "\226\128\162", "\aDEFAULT", l_v55_0(5), v70);
+    end;
+    local function v76(v73)
+        local v74 = v73:get();
+        local v75 = v73:list();
+        if #v74 == 0 then
+            v73:set(v75);
+        end;
+    end;
+    local function v78(v77)
+        return function()
+            -- upvalues: v77 (ref)
+            panorama.SteamOverlayAPI.OpenExternalBrowserURL(v77);
+        end;
+    end;
+    local _ = {};
+    local v80 = v11.get("house");
+    local v81 = {
+        main = ui.create(v80, "##main", v19), 
+        presets = ui.create(v80, "##presets", v53)
+    };
+    local v82 = {};
+    v81.main:label(v9.name);
+    v81.main:button(l_v59_0(v9.icon, 5), nil, true);
+    v81.main:label("YouTube");
+    v81.main:button(l_v59_0(v11.get("youtube"), 5), v78("https://www.youtube.com/channel/UC_caqoBADBmeuIxtCtBRJEw"), true);
+    v81.main:label("Discord");
+    v81.main:button(l_v59_0(v11.get("discord"), 5), v78("https://discord.gg/tHtmkVQ4S5"), true);
+    v81.main:label("Config");
+    v81.main:button(l_v59_0(v11.get("gears"), 5), v78("https://market.neverlose.cc/50BSBN"), true);
+    local v83 = {};
+    local v84 = string.lower(v9.name);
+    local v85 = db[v84] or {};
+    local v86 = {};
+    local v87 = {};
+    do
+        local l_v83_0 = v83;
+        do
+            local l_v84_0, l_v85_0, l_v86_0, l_v87_0 = v84, v85, v86, v87;
+            local function v96(v93, v94)
+                -- upvalues: l_v87_0 (ref)
+                local v95 = {
+                    name = v93, 
+                    data = v94
+                };
+                table.insert(l_v87_0, v95);
+            end;
+            v96("GODMODKI 666", "eyJBbnRpLUFpbSI6eyJDb3VudGVyLVRlcnJvcmlzdDpBaXIgQ3JvdWNoOmJvZHlfbW9kZSI6IlRpY2tzIiwiQ291bnRlci1UZXJyb3Jpc3Q6QWlyIENyb3VjaDpib2R5X3RpY2tzIjoxMi4wLCJDb3VudGVyLVRlcnJvcmlzdDpBaXIgQ3JvdWNoOmJvZHlfeWF3Ijp0cnVlLCJDb3VudGVyLVRlcnJvcmlzdDpBaXIgQ3JvdWNoOmNob2tlXzEiOjE2LjAsIkNvdW50ZXItVGVycm9yaXN0OkFpciBDcm91Y2g6Y2hva2VfMTAiOjE2LjAsIkNvdW50ZXItVGVycm9yaXN0OkFpciBDcm91Y2g6Y2hva2VfMiI6MTEuMCwiQ291bnRlci1UZXJyb3Jpc3Q6QWlyIENyb3VjaDpjaG9rZV8zIjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpBaXIgQ3JvdWNoOmNob2tlXzQiOjE2LjAsIkNvdW50ZXItVGVycm9yaXN0OkFpciBDcm91Y2g6Y2hva2VfNSI6MTYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6QWlyIENyb3VjaDpjaG9rZV82IjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpBaXIgQ3JvdWNoOmNob2tlXzciOjE2LjAsIkNvdW50ZXItVGVycm9yaXN0OkFpciBDcm91Y2g6Y2hva2VfOCI6MTYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6QWlyIENyb3VjaDpjaG9rZV85IjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpBaXIgQ3JvdWNoOmNob2tlX21vZGUiOiJSYW5kb21pemUiLCJDb3VudGVyLVRlcnJvcmlzdDpBaXIgQ3JvdWNoOmNob2tlX3N0ZXBzIjoyLjAsIkNvdW50ZXItVGVycm9yaXN0OkFpciBDcm91Y2g6ZGVsYXlfMSI6My4wLCJDb3VudGVyLVRlcnJvcmlzdDpBaXIgQ3JvdWNoOmRlbGF5XzEwIjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkFpciBDcm91Y2g6ZGVsYXlfMiI6MTQuMCwiQ291bnRlci1UZXJyb3Jpc3Q6QWlyIENyb3VjaDpkZWxheV8zIjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkFpciBDcm91Y2g6ZGVsYXlfNCI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpBaXIgQ3JvdWNoOmRlbGF5XzUiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6QWlyIENyb3VjaDpkZWxheV82IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkFpciBDcm91Y2g6ZGVsYXlfNyI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpBaXIgQ3JvdWNoOmRlbGF5XzgiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6QWlyIENyb3VjaDpkZWxheV85IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkFpciBDcm91Y2g6ZGVsYXlfbW9kZSI6IlJhbmRvbWl6ZSIsIkNvdW50ZXItVGVycm9yaXN0OkFpciBDcm91Y2g6ZGVsYXlfc3RlcHMiOjIuMCwiQ291bnRlci1UZXJyb3Jpc3Q6QWlyIENyb3VjaDplbmFibGVkIjp0cnVlLCJDb3VudGVyLVRlcnJvcmlzdDpBaXIgQ3JvdWNoOmZvcmNlX2RlZmVuc2l2ZSI6dHJ1ZSwiQ291bnRlci1UZXJyb3Jpc3Q6QWlyIENyb3VjaDpsZWZ0X2xpbWl0Ijo2MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpBaXIgQ3JvdWNoOmxpbWl0XzEiOjYwLjAsIkNvdW50ZXItVGVycm9yaXN0OkFpciBDcm91Y2g6bGltaXRfMiI6NDkuMCwiQ291bnRlci1UZXJyb3Jpc3Q6QWlyIENyb3VjaDpsaW1pdF9tb2RlIjoiU3dpdGNoIiwiQ291bnRlci1UZXJyb3Jpc3Q6QWlyIENyb3VjaDptb2RpZmllcl8xIjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkFpciBDcm91Y2g6bW9kaWZpZXJfMTAiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6QWlyIENyb3VjaDptb2RpZmllcl8yIjotMTEuMCwiQ291bnRlci1UZXJyb3Jpc3Q6QWlyIENyb3VjaDptb2RpZmllcl8zIjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkFpciBDcm91Y2g6bW9kaWZpZXJfNCI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpBaXIgQ3JvdWNoOm1vZGlmaWVyXzUiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6QWlyIENyb3VjaDptb2RpZmllcl82IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkFpciBDcm91Y2g6bW9kaWZpZXJfNyI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpBaXIgQ3JvdWNoOm1vZGlmaWVyXzgiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6QWlyIENyb3VjaDptb2RpZmllcl85IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkFpciBDcm91Y2g6bW9kaWZpZXJfbW9kZSI6IlJhbmRvbWl6ZSIsIkNvdW50ZXItVGVycm9yaXN0OkFpciBDcm91Y2g6bW9kaWZpZXJfb2Zmc2V0IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkFpciBDcm91Y2g6bW9kaWZpZXJfc3RlcHMiOjIuMCwiQ291bnRlci1UZXJyb3Jpc3Q6QWlyIENyb3VjaDpyaWdodF9saW1pdCI6NjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6QWlyIENyb3VjaDp5YXdfYWRkIjp0cnVlLCJDb3VudGVyLVRlcnJvcmlzdDpBaXIgQ3JvdWNoOnlhd19sZWZ0IjotMjIuMCwiQ291bnRlci1UZXJyb3Jpc3Q6QWlyIENyb3VjaDp5YXdfbW9kaWZpZXIiOiJTcGluIiwiQ291bnRlci1UZXJyb3Jpc3Q6QWlyIENyb3VjaDp5YXdfb2Zmc2V0IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkFpciBDcm91Y2g6eWF3X3JpZ2h0Ijo0NC4wLCJDb3VudGVyLVRlcnJvcmlzdDpDcm91Y2hpbmc6Ym9keV9tb2RlIjoiUmFuZG9tIiwiQ291bnRlci1UZXJyb3Jpc3Q6Q3JvdWNoaW5nOmJvZHlfdGlja3MiOjEyLjAsIkNvdW50ZXItVGVycm9yaXN0OkNyb3VjaGluZzpib2R5X3lhdyI6dHJ1ZSwiQ291bnRlci1UZXJyb3Jpc3Q6Q3JvdWNoaW5nOmNob2tlXzEiOjE0LjAsIkNvdW50ZXItVGVycm9yaXN0OkNyb3VjaGluZzpjaG9rZV8xMCI6MTIuMCwiQ291bnRlci1UZXJyb3Jpc3Q6Q3JvdWNoaW5nOmNob2tlXzIiOjE1LjAsIkNvdW50ZXItVGVycm9yaXN0OkNyb3VjaGluZzpjaG9rZV8zIjoxMC4wLCJDb3VudGVyLVRlcnJvcmlzdDpDcm91Y2hpbmc6Y2hva2VfNCI6MjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6Q3JvdWNoaW5nOmNob2tlXzUiOjUuMCwiQ291bnRlci1UZXJyb3Jpc3Q6Q3JvdWNoaW5nOmNob2tlXzYiOjIyLjAsIkNvdW50ZXItVGVycm9yaXN0OkNyb3VjaGluZzpjaG9rZV83IjoyLjAsIkNvdW50ZXItVGVycm9yaXN0OkNyb3VjaGluZzpjaG9rZV84IjoyMi4wLCJDb3VudGVyLVRlcnJvcmlzdDpDcm91Y2hpbmc6Y2hva2VfOSI6Ny4wLCJDb3VudGVyLVRlcnJvcmlzdDpDcm91Y2hpbmc6Y2hva2VfbW9kZSI6IlNlcXVlbnRpYWwiLCJDb3VudGVyLVRlcnJvcmlzdDpDcm91Y2hpbmc6Y2hva2Vfc3RlcHMiOjEwLjAsIkNvdW50ZXItVGVycm9yaXN0OkNyb3VjaGluZzpkZWxheV8xIjo3LjAsIkNvdW50ZXItVGVycm9yaXN0OkNyb3VjaGluZzpkZWxheV8xMCI6MTAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6Q3JvdWNoaW5nOmRlbGF5XzIiOjIuMCwiQ291bnRlci1UZXJyb3Jpc3Q6Q3JvdWNoaW5nOmRlbGF5XzMiOjguMCwiQ291bnRlci1UZXJyb3Jpc3Q6Q3JvdWNoaW5nOmRlbGF5XzQiOjMuMCwiQ291bnRlci1UZXJyb3Jpc3Q6Q3JvdWNoaW5nOmRlbGF5XzUiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6Q3JvdWNoaW5nOmRlbGF5XzYiOjYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6Q3JvdWNoaW5nOmRlbGF5XzciOjkuMCwiQ291bnRlci1UZXJyb3Jpc3Q6Q3JvdWNoaW5nOmRlbGF5XzgiOjcuMCwiQ291bnRlci1UZXJyb3Jpc3Q6Q3JvdWNoaW5nOmRlbGF5XzkiOjEuMCwiQ291bnRlci1UZXJyb3Jpc3Q6Q3JvdWNoaW5nOmRlbGF5X21vZGUiOiJTZXF1ZW50aWFsIiwiQ291bnRlci1UZXJyb3Jpc3Q6Q3JvdWNoaW5nOmRlbGF5X3N0ZXBzIjoxMC4wLCJDb3VudGVyLVRlcnJvcmlzdDpDcm91Y2hpbmc6ZW5hYmxlZCI6dHJ1ZSwiQ291bnRlci1UZXJyb3Jpc3Q6Q3JvdWNoaW5nOmZvcmNlX2RlZmVuc2l2ZSI6dHJ1ZSwiQ291bnRlci1UZXJyb3Jpc3Q6Q3JvdWNoaW5nOmxlZnRfbGltaXQiOjYwLjAsIkNvdW50ZXItVGVycm9yaXN0OkNyb3VjaGluZzpsaW1pdF8xIjo2MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpDcm91Y2hpbmc6bGltaXRfMiI6NTAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6Q3JvdWNoaW5nOmxpbWl0X21vZGUiOiJSYW5kb20iLCJDb3VudGVyLVRlcnJvcmlzdDpDcm91Y2hpbmc6bW9kaWZpZXJfMSI6Ni4wLCJDb3VudGVyLVRlcnJvcmlzdDpDcm91Y2hpbmc6bW9kaWZpZXJfMTAiOjE5LjAsIkNvdW50ZXItVGVycm9yaXN0OkNyb3VjaGluZzptb2RpZmllcl8yIjotOS4wLCJDb3VudGVyLVRlcnJvcmlzdDpDcm91Y2hpbmc6bW9kaWZpZXJfMyI6MjguMCwiQ291bnRlci1UZXJyb3Jpc3Q6Q3JvdWNoaW5nOm1vZGlmaWVyXzQiOjMwLjAsIkNvdW50ZXItVGVycm9yaXN0OkNyb3VjaGluZzptb2RpZmllcl81IjoxMS4wLCJDb3VudGVyLVRlcnJvcmlzdDpDcm91Y2hpbmc6bW9kaWZpZXJfNiI6MTAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6Q3JvdWNoaW5nOm1vZGlmaWVyXzciOi0yMS4wLCJDb3VudGVyLVRlcnJvcmlzdDpDcm91Y2hpbmc6bW9kaWZpZXJfOCI6LTI1LjAsIkNvdW50ZXItVGVycm9yaXN0OkNyb3VjaGluZzptb2RpZmllcl85IjoyMi4wLCJDb3VudGVyLVRlcnJvcmlzdDpDcm91Y2hpbmc6bW9kaWZpZXJfbW9kZSI6IlNlcXVlbnRpYWwiLCJDb3VudGVyLVRlcnJvcmlzdDpDcm91Y2hpbmc6bW9kaWZpZXJfb2Zmc2V0IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkNyb3VjaGluZzptb2RpZmllcl9zdGVwcyI6MTAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6Q3JvdWNoaW5nOnJpZ2h0X2xpbWl0Ijo2MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpDcm91Y2hpbmc6eWF3X2FkZCI6dHJ1ZSwiQ291bnRlci1UZXJyb3Jpc3Q6Q3JvdWNoaW5nOnlhd19sZWZ0IjotMjIuMCwiQ291bnRlci1UZXJyb3Jpc3Q6Q3JvdWNoaW5nOnlhd19tb2RpZmllciI6IjUtV2F5IiwiQ291bnRlci1UZXJyb3Jpc3Q6Q3JvdWNoaW5nOnlhd19vZmZzZXQiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6Q3JvdWNoaW5nOnlhd19yaWdodCI6NDQuMCwiQ291bnRlci1UZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmJvZHlfbW9kZSI6IkRlZmF1bHQiLCJDb3VudGVyLVRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6Ym9keV90aWNrcyI6NC4wLCJDb3VudGVyLVRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6Ym9keV95YXciOmZhbHNlLCJDb3VudGVyLVRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6Y2hva2VfMSI6MTYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmNob2tlXzEwIjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6Y2hva2VfMiI6MTYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmNob2tlXzMiOjE2LjAsIkNvdW50ZXItVGVycm9yaXN0OkZyZWVzdGFuZGluZzpjaG9rZV80IjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6Y2hva2VfNSI6MTYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmNob2tlXzYiOjE2LjAsIkNvdW50ZXItVGVycm9yaXN0OkZyZWVzdGFuZGluZzpjaG9rZV83IjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6Y2hva2VfOCI6MTYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmNob2tlXzkiOjE2LjAsIkNvdW50ZXItVGVycm9yaXN0OkZyZWVzdGFuZGluZzpjaG9rZV9tb2RlIjoiRGVmYXVsdCIsIkNvdW50ZXItVGVycm9yaXN0OkZyZWVzdGFuZGluZzpjaG9rZV9zdGVwcyI6Mi4wLCJDb3VudGVyLVRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6ZGVsYXlfMSI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6ZGVsYXlfMTAiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmRlbGF5XzIiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmRlbGF5XzMiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmRlbGF5XzQiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmRlbGF5XzUiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmRlbGF5XzYiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmRlbGF5XzciOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmRlbGF5XzgiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmRlbGF5XzkiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmRlbGF5X21vZGUiOiJEZWZhdWx0IiwiQ291bnRlci1UZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmRlbGF5X3N0ZXBzIjoyLjAsIkNvdW50ZXItVGVycm9yaXN0OkZyZWVzdGFuZGluZzplbmFibGVkIjpmYWxzZSwiQ291bnRlci1UZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmZvcmNlX2RlZmVuc2l2ZSI6ZmFsc2UsIkNvdW50ZXItVGVycm9yaXN0OkZyZWVzdGFuZGluZzpsZWZ0X2xpbWl0Ijo2MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6bGltaXRfMSI6NjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmxpbWl0XzIiOjYwLjAsIkNvdW50ZXItVGVycm9yaXN0OkZyZWVzdGFuZGluZzpsaW1pdF9tb2RlIjoiRGVmYXVsdCIsIkNvdW50ZXItVGVycm9yaXN0OkZyZWVzdGFuZGluZzptb2RpZmllcl8xIjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkZyZWVzdGFuZGluZzptb2RpZmllcl8xMCI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6bW9kaWZpZXJfMiI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6bW9kaWZpZXJfMyI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6bW9kaWZpZXJfNCI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6bW9kaWZpZXJfNSI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6bW9kaWZpZXJfNiI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6bW9kaWZpZXJfNyI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6bW9kaWZpZXJfOCI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6bW9kaWZpZXJfOSI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6bW9kaWZpZXJfbW9kZSI6IkRlZmF1bHQiLCJDb3VudGVyLVRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6bW9kaWZpZXJfb2Zmc2V0IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkZyZWVzdGFuZGluZzptb2RpZmllcl9zdGVwcyI6Mi4wLCJDb3VudGVyLVRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6cmlnaHRfbGltaXQiOjYwLjAsIkNvdW50ZXItVGVycm9yaXN0OkZyZWVzdGFuZGluZzp5YXdfYWRkIjpmYWxzZSwiQ291bnRlci1UZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOnlhd19sZWZ0IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkZyZWVzdGFuZGluZzp5YXdfbW9kaWZpZXIiOiJEaXNhYmxlZCIsIkNvdW50ZXItVGVycm9yaXN0OkZyZWVzdGFuZGluZzp5YXdfb2Zmc2V0IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkZyZWVzdGFuZGluZzp5YXdfcmlnaHQiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6SW4gQWlyOmJvZHlfbW9kZSI6IkRlZmF1bHQiLCJDb3VudGVyLVRlcnJvcmlzdDpJbiBBaXI6Ym9keV90aWNrcyI6NC4wLCJDb3VudGVyLVRlcnJvcmlzdDpJbiBBaXI6Ym9keV95YXciOnRydWUsIkNvdW50ZXItVGVycm9yaXN0OkluIEFpcjpjaG9rZV8xIjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpJbiBBaXI6Y2hva2VfMTAiOjE2LjAsIkNvdW50ZXItVGVycm9yaXN0OkluIEFpcjpjaG9rZV8yIjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpJbiBBaXI6Y2hva2VfMyI6MTYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6SW4gQWlyOmNob2tlXzQiOjE2LjAsIkNvdW50ZXItVGVycm9yaXN0OkluIEFpcjpjaG9rZV81IjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpJbiBBaXI6Y2hva2VfNiI6MTYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6SW4gQWlyOmNob2tlXzciOjE2LjAsIkNvdW50ZXItVGVycm9yaXN0OkluIEFpcjpjaG9rZV84IjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpJbiBBaXI6Y2hva2VfOSI6MTYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6SW4gQWlyOmNob2tlX21vZGUiOiJEZWZhdWx0IiwiQ291bnRlci1UZXJyb3Jpc3Q6SW4gQWlyOmNob2tlX3N0ZXBzIjoyLjAsIkNvdW50ZXItVGVycm9yaXN0OkluIEFpcjpkZWxheV8xIjo0LjAsIkNvdW50ZXItVGVycm9yaXN0OkluIEFpcjpkZWxheV8xMCI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpJbiBBaXI6ZGVsYXlfMiI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpJbiBBaXI6ZGVsYXlfMyI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpJbiBBaXI6ZGVsYXlfNCI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpJbiBBaXI6ZGVsYXlfNSI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpJbiBBaXI6ZGVsYXlfNiI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpJbiBBaXI6ZGVsYXlfNyI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpJbiBBaXI6ZGVsYXlfOCI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpJbiBBaXI6ZGVsYXlfOSI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpJbiBBaXI6ZGVsYXlfbW9kZSI6IkRlZmF1bHQiLCJDb3VudGVyLVRlcnJvcmlzdDpJbiBBaXI6ZGVsYXlfc3RlcHMiOjIuMCwiQ291bnRlci1UZXJyb3Jpc3Q6SW4gQWlyOmVuYWJsZWQiOnRydWUsIkNvdW50ZXItVGVycm9yaXN0OkluIEFpcjpmb3JjZV9kZWZlbnNpdmUiOnRydWUsIkNvdW50ZXItVGVycm9yaXN0OkluIEFpcjpsZWZ0X2xpbWl0Ijo2MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpJbiBBaXI6bGltaXRfMSI6NjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6SW4gQWlyOmxpbWl0XzIiOjYwLjAsIkNvdW50ZXItVGVycm9yaXN0OkluIEFpcjpsaW1pdF9tb2RlIjoiRGVmYXVsdCIsIkNvdW50ZXItVGVycm9yaXN0OkluIEFpcjptb2RpZmllcl8xIjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkluIEFpcjptb2RpZmllcl8xMCI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpJbiBBaXI6bW9kaWZpZXJfMiI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpJbiBBaXI6bW9kaWZpZXJfMyI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpJbiBBaXI6bW9kaWZpZXJfNCI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpJbiBBaXI6bW9kaWZpZXJfNSI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpJbiBBaXI6bW9kaWZpZXJfNiI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpJbiBBaXI6bW9kaWZpZXJfNyI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpJbiBBaXI6bW9kaWZpZXJfOCI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpJbiBBaXI6bW9kaWZpZXJfOSI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpJbiBBaXI6bW9kaWZpZXJfbW9kZSI6IkRlZmF1bHQiLCJDb3VudGVyLVRlcnJvcmlzdDpJbiBBaXI6bW9kaWZpZXJfb2Zmc2V0IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkluIEFpcjptb2RpZmllcl9zdGVwcyI6Mi4wLCJDb3VudGVyLVRlcnJvcmlzdDpJbiBBaXI6cmlnaHRfbGltaXQiOjYwLjAsIkNvdW50ZXItVGVycm9yaXN0OkluIEFpcjp5YXdfYWRkIjp0cnVlLCJDb3VudGVyLVRlcnJvcmlzdDpJbiBBaXI6eWF3X2xlZnQiOi0yMi4wLCJDb3VudGVyLVRlcnJvcmlzdDpJbiBBaXI6eWF3X21vZGlmaWVyIjoiRGlzYWJsZWQiLCJDb3VudGVyLVRlcnJvcmlzdDpJbiBBaXI6eWF3X29mZnNldCI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpJbiBBaXI6eWF3X3JpZ2h0IjozOC4wLCJDb3VudGVyLVRlcnJvcmlzdDpNYW51YWwgWWF3OmJvZHlfbW9kZSI6IkRlZmF1bHQiLCJDb3VudGVyLVRlcnJvcmlzdDpNYW51YWwgWWF3OmJvZHlfdGlja3MiOjQuMCwiQ291bnRlci1UZXJyb3Jpc3Q6TWFudWFsIFlhdzpib2R5X3lhdyI6ZmFsc2UsIkNvdW50ZXItVGVycm9yaXN0Ok1hbnVhbCBZYXc6Y2hva2VfMSI6MTYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6TWFudWFsIFlhdzpjaG9rZV8xMCI6MTYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6TWFudWFsIFlhdzpjaG9rZV8yIjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpNYW51YWwgWWF3OmNob2tlXzMiOjE2LjAsIkNvdW50ZXItVGVycm9yaXN0Ok1hbnVhbCBZYXc6Y2hva2VfNCI6MTYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6TWFudWFsIFlhdzpjaG9rZV81IjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpNYW51YWwgWWF3OmNob2tlXzYiOjE2LjAsIkNvdW50ZXItVGVycm9yaXN0Ok1hbnVhbCBZYXc6Y2hva2VfNyI6MTYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6TWFudWFsIFlhdzpjaG9rZV84IjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpNYW51YWwgWWF3OmNob2tlXzkiOjE2LjAsIkNvdW50ZXItVGVycm9yaXN0Ok1hbnVhbCBZYXc6Y2hva2VfbW9kZSI6IkRlZmF1bHQiLCJDb3VudGVyLVRlcnJvcmlzdDpNYW51YWwgWWF3OmNob2tlX3N0ZXBzIjoyLjAsIkNvdW50ZXItVGVycm9yaXN0Ok1hbnVhbCBZYXc6ZGVsYXlfMSI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpNYW51YWwgWWF3OmRlbGF5XzEwIjowLjAsIkNvdW50ZXItVGVycm9yaXN0Ok1hbnVhbCBZYXc6ZGVsYXlfMiI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpNYW51YWwgWWF3OmRlbGF5XzMiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6TWFudWFsIFlhdzpkZWxheV80IjowLjAsIkNvdW50ZXItVGVycm9yaXN0Ok1hbnVhbCBZYXc6ZGVsYXlfNSI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpNYW51YWwgWWF3OmRlbGF5XzYiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6TWFudWFsIFlhdzpkZWxheV83IjowLjAsIkNvdW50ZXItVGVycm9yaXN0Ok1hbnVhbCBZYXc6ZGVsYXlfOCI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpNYW51YWwgWWF3OmRlbGF5XzkiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6TWFudWFsIFlhdzpkZWxheV9tb2RlIjoiRGVmYXVsdCIsIkNvdW50ZXItVGVycm9yaXN0Ok1hbnVhbCBZYXc6ZGVsYXlfc3RlcHMiOjIuMCwiQ291bnRlci1UZXJyb3Jpc3Q6TWFudWFsIFlhdzplbmFibGVkIjpmYWxzZSwiQ291bnRlci1UZXJyb3Jpc3Q6TWFudWFsIFlhdzpmb3JjZV9kZWZlbnNpdmUiOmZhbHNlLCJDb3VudGVyLVRlcnJvcmlzdDpNYW51YWwgWWF3OmxlZnRfbGltaXQiOjYwLjAsIkNvdW50ZXItVGVycm9yaXN0Ok1hbnVhbCBZYXc6bGltaXRfMSI6NjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6TWFudWFsIFlhdzpsaW1pdF8yIjo2MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpNYW51YWwgWWF3OmxpbWl0X21vZGUiOiJEZWZhdWx0IiwiQ291bnRlci1UZXJyb3Jpc3Q6TWFudWFsIFlhdzptb2RpZmllcl8xIjowLjAsIkNvdW50ZXItVGVycm9yaXN0Ok1hbnVhbCBZYXc6bW9kaWZpZXJfMTAiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6TWFudWFsIFlhdzptb2RpZmllcl8yIjowLjAsIkNvdW50ZXItVGVycm9yaXN0Ok1hbnVhbCBZYXc6bW9kaWZpZXJfMyI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpNYW51YWwgWWF3Om1vZGlmaWVyXzQiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6TWFudWFsIFlhdzptb2RpZmllcl81IjowLjAsIkNvdW50ZXItVGVycm9yaXN0Ok1hbnVhbCBZYXc6bW9kaWZpZXJfNiI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpNYW51YWwgWWF3Om1vZGlmaWVyXzciOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6TWFudWFsIFlhdzptb2RpZmllcl84IjowLjAsIkNvdW50ZXItVGVycm9yaXN0Ok1hbnVhbCBZYXc6bW9kaWZpZXJfOSI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpNYW51YWwgWWF3Om1vZGlmaWVyX21vZGUiOiJEZWZhdWx0IiwiQ291bnRlci1UZXJyb3Jpc3Q6TWFudWFsIFlhdzptb2RpZmllcl9vZmZzZXQiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6TWFudWFsIFlhdzptb2RpZmllcl9zdGVwcyI6Mi4wLCJDb3VudGVyLVRlcnJvcmlzdDpNYW51YWwgWWF3OnJpZ2h0X2xpbWl0Ijo2MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpNYW51YWwgWWF3Onlhd19hZGQiOmZhbHNlLCJDb3VudGVyLVRlcnJvcmlzdDpNYW51YWwgWWF3Onlhd19sZWZ0IjowLjAsIkNvdW50ZXItVGVycm9yaXN0Ok1hbnVhbCBZYXc6eWF3X21vZGlmaWVyIjoiRGlzYWJsZWQiLCJDb3VudGVyLVRlcnJvcmlzdDpNYW51YWwgWWF3Onlhd19vZmZzZXQiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6TWFudWFsIFlhdzp5YXdfcmlnaHQiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6UnVubmluZzpib2R5X21vZGUiOiJEZWZhdWx0IiwiQ291bnRlci1UZXJyb3Jpc3Q6UnVubmluZzpib2R5X3RpY2tzIjo0LjAsIkNvdW50ZXItVGVycm9yaXN0OlJ1bm5pbmc6Ym9keV95YXciOnRydWUsIkNvdW50ZXItVGVycm9yaXN0OlJ1bm5pbmc6Y2hva2VfMSI6MS4wLCJDb3VudGVyLVRlcnJvcmlzdDpSdW5uaW5nOmNob2tlXzEwIjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpSdW5uaW5nOmNob2tlXzIiOjIyLjAsIkNvdW50ZXItVGVycm9yaXN0OlJ1bm5pbmc6Y2hva2VfMyI6MTYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6UnVubmluZzpjaG9rZV80IjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpSdW5uaW5nOmNob2tlXzUiOjE2LjAsIkNvdW50ZXItVGVycm9yaXN0OlJ1bm5pbmc6Y2hva2VfNiI6MTYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6UnVubmluZzpjaG9rZV83IjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpSdW5uaW5nOmNob2tlXzgiOjE2LjAsIkNvdW50ZXItVGVycm9yaXN0OlJ1bm5pbmc6Y2hva2VfOSI6MTYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6UnVubmluZzpjaG9rZV9tb2RlIjoiUmFuZG9taXplIiwiQ291bnRlci1UZXJyb3Jpc3Q6UnVubmluZzpjaG9rZV9zdGVwcyI6Mi4wLCJDb3VudGVyLVRlcnJvcmlzdDpSdW5uaW5nOmRlbGF5XzEiOjEuMCwiQ291bnRlci1UZXJyb3Jpc3Q6UnVubmluZzpkZWxheV8xMCI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpSdW5uaW5nOmRlbGF5XzIiOjE2LjAsIkNvdW50ZXItVGVycm9yaXN0OlJ1bm5pbmc6ZGVsYXlfMyI6My4wLCJDb3VudGVyLVRlcnJvcmlzdDpSdW5uaW5nOmRlbGF5XzQiOjQuMCwiQ291bnRlci1UZXJyb3Jpc3Q6UnVubmluZzpkZWxheV81IjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpSdW5uaW5nOmRlbGF5XzYiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6UnVubmluZzpkZWxheV83IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OlJ1bm5pbmc6ZGVsYXlfOCI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpSdW5uaW5nOmRlbGF5XzkiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6UnVubmluZzpkZWxheV9tb2RlIjoiU2VxdWVudGlhbCIsIkNvdW50ZXItVGVycm9yaXN0OlJ1bm5pbmc6ZGVsYXlfc3RlcHMiOjUuMCwiQ291bnRlci1UZXJyb3Jpc3Q6UnVubmluZzplbmFibGVkIjp0cnVlLCJDb3VudGVyLVRlcnJvcmlzdDpSdW5uaW5nOmZvcmNlX2RlZmVuc2l2ZSI6dHJ1ZSwiQ291bnRlci1UZXJyb3Jpc3Q6UnVubmluZzpsZWZ0X2xpbWl0Ijo2MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpSdW5uaW5nOmxpbWl0XzEiOjYwLjAsIkNvdW50ZXItVGVycm9yaXN0OlJ1bm5pbmc6bGltaXRfMiI6NDUuMCwiQ291bnRlci1UZXJyb3Jpc3Q6UnVubmluZzpsaW1pdF9tb2RlIjoiUmFuZG9tIiwiQ291bnRlci1UZXJyb3Jpc3Q6UnVubmluZzptb2RpZmllcl8xIjowLjAsIkNvdW50ZXItVGVycm9yaXN0OlJ1bm5pbmc6bW9kaWZpZXJfMTAiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6UnVubmluZzptb2RpZmllcl8yIjowLjAsIkNvdW50ZXItVGVycm9yaXN0OlJ1bm5pbmc6bW9kaWZpZXJfMyI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpSdW5uaW5nOm1vZGlmaWVyXzQiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6UnVubmluZzptb2RpZmllcl81IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OlJ1bm5pbmc6bW9kaWZpZXJfNiI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpSdW5uaW5nOm1vZGlmaWVyXzciOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6UnVubmluZzptb2RpZmllcl84IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OlJ1bm5pbmc6bW9kaWZpZXJfOSI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpSdW5uaW5nOm1vZGlmaWVyX21vZGUiOiJEZWZhdWx0IiwiQ291bnRlci1UZXJyb3Jpc3Q6UnVubmluZzptb2RpZmllcl9vZmZzZXQiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6UnVubmluZzptb2RpZmllcl9zdGVwcyI6Mi4wLCJDb3VudGVyLVRlcnJvcmlzdDpSdW5uaW5nOnJpZ2h0X2xpbWl0Ijo2MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpSdW5uaW5nOnlhd19hZGQiOnRydWUsIkNvdW50ZXItVGVycm9yaXN0OlJ1bm5pbmc6eWF3X2xlZnQiOi0yNy4wLCJDb3VudGVyLVRlcnJvcmlzdDpSdW5uaW5nOnlhd19tb2RpZmllciI6IkRpc2FibGVkIiwiQ291bnRlci1UZXJyb3Jpc3Q6UnVubmluZzp5YXdfb2Zmc2V0IjotNS4wLCJDb3VudGVyLVRlcnJvcmlzdDpSdW5uaW5nOnlhd19yaWdodCI6NDQuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6Ym9keV9tb2RlIjoiUmFuZG9tIiwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6Ym9keV90aWNrcyI6MTYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6Ym9keV95YXciOnRydWUsIkNvdW50ZXItVGVycm9yaXN0OlNuZWFraW5nOmNob2tlXzEiOjEuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6Y2hva2VfMTAiOjIyLjAsIkNvdW50ZXItVGVycm9yaXN0OlNuZWFraW5nOmNob2tlXzIiOjE0LjAsIkNvdW50ZXItVGVycm9yaXN0OlNuZWFraW5nOmNob2tlXzMiOjkuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6Y2hva2VfNCI6MjIuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6Y2hva2VfNSI6MTIuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6Y2hva2VfNiI6MjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6Y2hva2VfNyI6OC4wLCJDb3VudGVyLVRlcnJvcmlzdDpTbmVha2luZzpjaG9rZV84IjoyMi4wLCJDb3VudGVyLVRlcnJvcmlzdDpTbmVha2luZzpjaG9rZV85Ijo4LjAsIkNvdW50ZXItVGVycm9yaXN0OlNuZWFraW5nOmNob2tlX21vZGUiOiJTZXF1ZW50aWFsIiwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6Y2hva2Vfc3RlcHMiOjEwLjAsIkNvdW50ZXItVGVycm9yaXN0OlNuZWFraW5nOmRlbGF5XzEiOjcuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6ZGVsYXlfMTAiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6ZGVsYXlfMiI6Ni4wLCJDb3VudGVyLVRlcnJvcmlzdDpTbmVha2luZzpkZWxheV8zIjo1LjAsIkNvdW50ZXItVGVycm9yaXN0OlNuZWFraW5nOmRlbGF5XzQiOjguMCwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6ZGVsYXlfNSI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpTbmVha2luZzpkZWxheV82Ijo1LjAsIkNvdW50ZXItVGVycm9yaXN0OlNuZWFraW5nOmRlbGF5XzciOjIuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6ZGVsYXlfOCI6My4wLCJDb3VudGVyLVRlcnJvcmlzdDpTbmVha2luZzpkZWxheV85IjoyLjAsIkNvdW50ZXItVGVycm9yaXN0OlNuZWFraW5nOmRlbGF5X21vZGUiOiJTZXF1ZW50aWFsIiwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6ZGVsYXlfc3RlcHMiOjEwLjAsIkNvdW50ZXItVGVycm9yaXN0OlNuZWFraW5nOmVuYWJsZWQiOnRydWUsIkNvdW50ZXItVGVycm9yaXN0OlNuZWFraW5nOmZvcmNlX2RlZmVuc2l2ZSI6dHJ1ZSwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6bGVmdF9saW1pdCI6NjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6bGltaXRfMSI6NjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6bGltaXRfMiI6NDcuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6bGltaXRfbW9kZSI6IlJhbmRvbSIsIkNvdW50ZXItVGVycm9yaXN0OlNuZWFraW5nOm1vZGlmaWVyXzEiOi0yNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpTbmVha2luZzptb2RpZmllcl8xMCI6LTQuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6bW9kaWZpZXJfMiI6LTE2LjAsIkNvdW50ZXItVGVycm9yaXN0OlNuZWFraW5nOm1vZGlmaWVyXzMiOi0yMy4wLCJDb3VudGVyLVRlcnJvcmlzdDpTbmVha2luZzptb2RpZmllcl80IjotMTAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6bW9kaWZpZXJfNSI6MTEuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6bW9kaWZpZXJfNiI6LTE0LjAsIkNvdW50ZXItVGVycm9yaXN0OlNuZWFraW5nOm1vZGlmaWVyXzciOi0yNy4wLCJDb3VudGVyLVRlcnJvcmlzdDpTbmVha2luZzptb2RpZmllcl84IjotMjIuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6bW9kaWZpZXJfOSI6LTIwLjAsIkNvdW50ZXItVGVycm9yaXN0OlNuZWFraW5nOm1vZGlmaWVyX21vZGUiOiJTZXF1ZW50aWFsIiwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6bW9kaWZpZXJfb2Zmc2V0IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OlNuZWFraW5nOm1vZGlmaWVyX3N0ZXBzIjoxMC4wLCJDb3VudGVyLVRlcnJvcmlzdDpTbmVha2luZzpyaWdodF9saW1pdCI6NjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6eWF3X2FkZCI6dHJ1ZSwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6eWF3X2xlZnQiOi0yMi4wLCJDb3VudGVyLVRlcnJvcmlzdDpTbmVha2luZzp5YXdfbW9kaWZpZXIiOiI1LVdheSIsIkNvdW50ZXItVGVycm9yaXN0OlNuZWFraW5nOnlhd19vZmZzZXQiOjE1LjAsIkNvdW50ZXItVGVycm9yaXN0OlNuZWFraW5nOnlhd19yaWdodCI6MzMuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U3RhbmRpbmc6Ym9keV9tb2RlIjoiUmFuZG9tIiwiQ291bnRlci1UZXJyb3Jpc3Q6U3RhbmRpbmc6Ym9keV90aWNrcyI6MTIuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U3RhbmRpbmc6Ym9keV95YXciOnRydWUsIkNvdW50ZXItVGVycm9yaXN0OlN0YW5kaW5nOmNob2tlXzEiOjE2LjAsIkNvdW50ZXItVGVycm9yaXN0OlN0YW5kaW5nOmNob2tlXzEwIjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpTdGFuZGluZzpjaG9rZV8yIjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpTdGFuZGluZzpjaG9rZV8zIjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpTdGFuZGluZzpjaG9rZV80IjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpTdGFuZGluZzpjaG9rZV81IjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpTdGFuZGluZzpjaG9rZV82IjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpTdGFuZGluZzpjaG9rZV83IjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpTdGFuZGluZzpjaG9rZV84IjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpTdGFuZGluZzpjaG9rZV85IjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpTdGFuZGluZzpjaG9rZV9tb2RlIjoiRGVmYXVsdCIsIkNvdW50ZXItVGVycm9yaXN0OlN0YW5kaW5nOmNob2tlX3N0ZXBzIjoyLjAsIkNvdW50ZXItVGVycm9yaXN0OlN0YW5kaW5nOmRlbGF5XzEiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U3RhbmRpbmc6ZGVsYXlfMTAiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U3RhbmRpbmc6ZGVsYXlfMiI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpTdGFuZGluZzpkZWxheV8zIjowLjAsIkNvdW50ZXItVGVycm9yaXN0OlN0YW5kaW5nOmRlbGF5XzQiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U3RhbmRpbmc6ZGVsYXlfNSI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpTdGFuZGluZzpkZWxheV82IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OlN0YW5kaW5nOmRlbGF5XzciOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U3RhbmRpbmc6ZGVsYXlfOCI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpTdGFuZGluZzpkZWxheV85IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OlN0YW5kaW5nOmRlbGF5X21vZGUiOiJEZWZhdWx0IiwiQ291bnRlci1UZXJyb3Jpc3Q6U3RhbmRpbmc6ZGVsYXlfc3RlcHMiOjIuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U3RhbmRpbmc6ZW5hYmxlZCI6dHJ1ZSwiQ291bnRlci1UZXJyb3Jpc3Q6U3RhbmRpbmc6Zm9yY2VfZGVmZW5zaXZlIjpmYWxzZSwiQ291bnRlci1UZXJyb3Jpc3Q6U3RhbmRpbmc6bGVmdF9saW1pdCI6NjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U3RhbmRpbmc6bGltaXRfMSI6NjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U3RhbmRpbmc6bGltaXRfMiI6NDkuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U3RhbmRpbmc6bGltaXRfbW9kZSI6IlJhbmRvbSIsIkNvdW50ZXItVGVycm9yaXN0OlN0YW5kaW5nOm1vZGlmaWVyXzEiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U3RhbmRpbmc6bW9kaWZpZXJfMTAiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U3RhbmRpbmc6bW9kaWZpZXJfMiI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpTdGFuZGluZzptb2RpZmllcl8zIjowLjAsIkNvdW50ZXItVGVycm9yaXN0OlN0YW5kaW5nOm1vZGlmaWVyXzQiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U3RhbmRpbmc6bW9kaWZpZXJfNSI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpTdGFuZGluZzptb2RpZmllcl82IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OlN0YW5kaW5nOm1vZGlmaWVyXzciOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U3RhbmRpbmc6bW9kaWZpZXJfOCI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpTdGFuZGluZzptb2RpZmllcl85IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OlN0YW5kaW5nOm1vZGlmaWVyX21vZGUiOiJEZWZhdWx0IiwiQ291bnRlci1UZXJyb3Jpc3Q6U3RhbmRpbmc6bW9kaWZpZXJfb2Zmc2V0IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OlN0YW5kaW5nOm1vZGlmaWVyX3N0ZXBzIjoyLjAsIkNvdW50ZXItVGVycm9yaXN0OlN0YW5kaW5nOnJpZ2h0X2xpbWl0Ijo2MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpTdGFuZGluZzp5YXdfYWRkIjp0cnVlLCJDb3VudGVyLVRlcnJvcmlzdDpTdGFuZGluZzp5YXdfbGVmdCI6LTE2LjAsIkNvdW50ZXItVGVycm9yaXN0OlN0YW5kaW5nOnlhd19tb2RpZmllciI6IkRpc2FibGVkIiwiQ291bnRlci1UZXJyb3Jpc3Q6U3RhbmRpbmc6eWF3X29mZnNldCI6LTUuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U3RhbmRpbmc6eWF3X3JpZ2h0Ijo0NC4wLCJDb3VudGVyLVRlcnJvcmlzdDpXYWxraW5nOmJvZHlfbW9kZSI6IlJhbmRvbSIsIkNvdW50ZXItVGVycm9yaXN0OldhbGtpbmc6Ym9keV90aWNrcyI6MTYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6V2Fsa2luZzpib2R5X3lhdyI6dHJ1ZSwiQ291bnRlci1UZXJyb3Jpc3Q6V2Fsa2luZzpjaG9rZV8xIjoxOC4wLCJDb3VudGVyLVRlcnJvcmlzdDpXYWxraW5nOmNob2tlXzEwIjoxMy4wLCJDb3VudGVyLVRlcnJvcmlzdDpXYWxraW5nOmNob2tlXzIiOjEwLjAsIkNvdW50ZXItVGVycm9yaXN0OldhbGtpbmc6Y2hva2VfMyI6MTAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6V2Fsa2luZzpjaG9rZV80IjoyMi4wLCJDb3VudGVyLVRlcnJvcmlzdDpXYWxraW5nOmNob2tlXzUiOjIuMCwiQ291bnRlci1UZXJyb3Jpc3Q6V2Fsa2luZzpjaG9rZV82Ijo4LjAsIkNvdW50ZXItVGVycm9yaXN0OldhbGtpbmc6Y2hva2VfNyI6MjIuMCwiQ291bnRlci1UZXJyb3Jpc3Q6V2Fsa2luZzpjaG9rZV84Ijo3LjAsIkNvdW50ZXItVGVycm9yaXN0OldhbGtpbmc6Y2hva2VfOSI6MjIuMCwiQ291bnRlci1UZXJyb3Jpc3Q6V2Fsa2luZzpjaG9rZV9tb2RlIjoiU2VxdWVudGlhbCIsIkNvdW50ZXItVGVycm9yaXN0OldhbGtpbmc6Y2hva2Vfc3RlcHMiOjEwLjAsIkNvdW50ZXItVGVycm9yaXN0OldhbGtpbmc6ZGVsYXlfMSI6MS4wLCJDb3VudGVyLVRlcnJvcmlzdDpXYWxraW5nOmRlbGF5XzEwIjo5LjAsIkNvdW50ZXItVGVycm9yaXN0OldhbGtpbmc6ZGVsYXlfMiI6Ni4wLCJDb3VudGVyLVRlcnJvcmlzdDpXYWxraW5nOmRlbGF5XzMiOjUuMCwiQ291bnRlci1UZXJyb3Jpc3Q6V2Fsa2luZzpkZWxheV80IjoxMC4wLCJDb3VudGVyLVRlcnJvcmlzdDpXYWxraW5nOmRlbGF5XzUiOjUuMCwiQ291bnRlci1UZXJyb3Jpc3Q6V2Fsa2luZzpkZWxheV82Ijo0LjAsIkNvdW50ZXItVGVycm9yaXN0OldhbGtpbmc6ZGVsYXlfNyI6OS4wLCJDb3VudGVyLVRlcnJvcmlzdDpXYWxraW5nOmRlbGF5XzgiOjcuMCwiQ291bnRlci1UZXJyb3Jpc3Q6V2Fsa2luZzpkZWxheV85Ijo4LjAsIkNvdW50ZXItVGVycm9yaXN0OldhbGtpbmc6ZGVsYXlfbW9kZSI6IlNlcXVlbnRpYWwiLCJDb3VudGVyLVRlcnJvcmlzdDpXYWxraW5nOmRlbGF5X3N0ZXBzIjoxMC4wLCJDb3VudGVyLVRlcnJvcmlzdDpXYWxraW5nOmVuYWJsZWQiOnRydWUsIkNvdW50ZXItVGVycm9yaXN0OldhbGtpbmc6Zm9yY2VfZGVmZW5zaXZlIjp0cnVlLCJDb3VudGVyLVRlcnJvcmlzdDpXYWxraW5nOmxlZnRfbGltaXQiOjYwLjAsIkNvdW50ZXItVGVycm9yaXN0OldhbGtpbmc6bGltaXRfMSI6NjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6V2Fsa2luZzpsaW1pdF8yIjo1MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpXYWxraW5nOmxpbWl0X21vZGUiOiJSYW5kb20iLCJDb3VudGVyLVRlcnJvcmlzdDpXYWxraW5nOm1vZGlmaWVyXzEiOjYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6V2Fsa2luZzptb2RpZmllcl8xMCI6LTI3LjAsIkNvdW50ZXItVGVycm9yaXN0OldhbGtpbmc6bW9kaWZpZXJfMiI6MjguMCwiQ291bnRlci1UZXJyb3Jpc3Q6V2Fsa2luZzptb2RpZmllcl8zIjotMTkuMCwiQ291bnRlci1UZXJyb3Jpc3Q6V2Fsa2luZzptb2RpZmllcl80IjotMTAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6V2Fsa2luZzptb2RpZmllcl81IjotMTkuMCwiQ291bnRlci1UZXJyb3Jpc3Q6V2Fsa2luZzptb2RpZmllcl82Ijo1LjAsIkNvdW50ZXItVGVycm9yaXN0OldhbGtpbmc6bW9kaWZpZXJfNyI6MS4wLCJDb3VudGVyLVRlcnJvcmlzdDpXYWxraW5nOm1vZGlmaWVyXzgiOi0yNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpXYWxraW5nOm1vZGlmaWVyXzkiOjE5LjAsIkNvdW50ZXItVGVycm9yaXN0OldhbGtpbmc6bW9kaWZpZXJfbW9kZSI6IlNlcXVlbnRpYWwiLCJDb3VudGVyLVRlcnJvcmlzdDpXYWxraW5nOm1vZGlmaWVyX29mZnNldCI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpXYWxraW5nOm1vZGlmaWVyX3N0ZXBzIjoxMC4wLCJDb3VudGVyLVRlcnJvcmlzdDpXYWxraW5nOnJpZ2h0X2xpbWl0Ijo2MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpXYWxraW5nOnlhd19hZGQiOnRydWUsIkNvdW50ZXItVGVycm9yaXN0OldhbGtpbmc6eWF3X2xlZnQiOi0yNy4wLCJDb3VudGVyLVRlcnJvcmlzdDpXYWxraW5nOnlhd19tb2RpZmllciI6IjUtV2F5IiwiQ291bnRlci1UZXJyb3Jpc3Q6V2Fsa2luZzp5YXdfb2Zmc2V0Ijo1LjAsIkNvdW50ZXItVGVycm9yaXN0OldhbGtpbmc6eWF3X3JpZ2h0Ijo0OS4wLCJUZXJyb3Jpc3Q6QWlyIENyb3VjaDpib2R5X21vZGUiOiJUaWNrcyIsIlRlcnJvcmlzdDpBaXIgQ3JvdWNoOmJvZHlfdGlja3MiOjEyLjAsIlRlcnJvcmlzdDpBaXIgQ3JvdWNoOmJvZHlfeWF3Ijp0cnVlLCJUZXJyb3Jpc3Q6QWlyIENyb3VjaDpjaG9rZV8xIjoxNi4wLCJUZXJyb3Jpc3Q6QWlyIENyb3VjaDpjaG9rZV8xMCI6MTYuMCwiVGVycm9yaXN0OkFpciBDcm91Y2g6Y2hva2VfMiI6MTEuMCwiVGVycm9yaXN0OkFpciBDcm91Y2g6Y2hva2VfMyI6MTYuMCwiVGVycm9yaXN0OkFpciBDcm91Y2g6Y2hva2VfNCI6MTYuMCwiVGVycm9yaXN0OkFpciBDcm91Y2g6Y2hva2VfNSI6MTYuMCwiVGVycm9yaXN0OkFpciBDcm91Y2g6Y2hva2VfNiI6MTYuMCwiVGVycm9yaXN0OkFpciBDcm91Y2g6Y2hva2VfNyI6MTYuMCwiVGVycm9yaXN0OkFpciBDcm91Y2g6Y2hva2VfOCI6MTYuMCwiVGVycm9yaXN0OkFpciBDcm91Y2g6Y2hva2VfOSI6MTYuMCwiVGVycm9yaXN0OkFpciBDcm91Y2g6Y2hva2VfbW9kZSI6IlJhbmRvbWl6ZSIsIlRlcnJvcmlzdDpBaXIgQ3JvdWNoOmNob2tlX3N0ZXBzIjoyLjAsIlRlcnJvcmlzdDpBaXIgQ3JvdWNoOmRlbGF5XzEiOjMuMCwiVGVycm9yaXN0OkFpciBDcm91Y2g6ZGVsYXlfMTAiOjAuMCwiVGVycm9yaXN0OkFpciBDcm91Y2g6ZGVsYXlfMiI6MTQuMCwiVGVycm9yaXN0OkFpciBDcm91Y2g6ZGVsYXlfMyI6MC4wLCJUZXJyb3Jpc3Q6QWlyIENyb3VjaDpkZWxheV80IjowLjAsIlRlcnJvcmlzdDpBaXIgQ3JvdWNoOmRlbGF5XzUiOjAuMCwiVGVycm9yaXN0OkFpciBDcm91Y2g6ZGVsYXlfNiI6MC4wLCJUZXJyb3Jpc3Q6QWlyIENyb3VjaDpkZWxheV83IjowLjAsIlRlcnJvcmlzdDpBaXIgQ3JvdWNoOmRlbGF5XzgiOjAuMCwiVGVycm9yaXN0OkFpciBDcm91Y2g6ZGVsYXlfOSI6MC4wLCJUZXJyb3Jpc3Q6QWlyIENyb3VjaDpkZWxheV9tb2RlIjoiUmFuZG9taXplIiwiVGVycm9yaXN0OkFpciBDcm91Y2g6ZGVsYXlfc3RlcHMiOjIuMCwiVGVycm9yaXN0OkFpciBDcm91Y2g6ZW5hYmxlZCI6dHJ1ZSwiVGVycm9yaXN0OkFpciBDcm91Y2g6Zm9yY2VfZGVmZW5zaXZlIjp0cnVlLCJUZXJyb3Jpc3Q6QWlyIENyb3VjaDpsZWZ0X2xpbWl0Ijo2MC4wLCJUZXJyb3Jpc3Q6QWlyIENyb3VjaDpsaW1pdF8xIjo2MC4wLCJUZXJyb3Jpc3Q6QWlyIENyb3VjaDpsaW1pdF8yIjo0OS4wLCJUZXJyb3Jpc3Q6QWlyIENyb3VjaDpsaW1pdF9tb2RlIjoiU3dpdGNoIiwiVGVycm9yaXN0OkFpciBDcm91Y2g6bW9kaWZpZXJfMSI6MC4wLCJUZXJyb3Jpc3Q6QWlyIENyb3VjaDptb2RpZmllcl8xMCI6MC4wLCJUZXJyb3Jpc3Q6QWlyIENyb3VjaDptb2RpZmllcl8yIjotMTEuMCwiVGVycm9yaXN0OkFpciBDcm91Y2g6bW9kaWZpZXJfMyI6MC4wLCJUZXJyb3Jpc3Q6QWlyIENyb3VjaDptb2RpZmllcl80IjowLjAsIlRlcnJvcmlzdDpBaXIgQ3JvdWNoOm1vZGlmaWVyXzUiOjAuMCwiVGVycm9yaXN0OkFpciBDcm91Y2g6bW9kaWZpZXJfNiI6MC4wLCJUZXJyb3Jpc3Q6QWlyIENyb3VjaDptb2RpZmllcl83IjowLjAsIlRlcnJvcmlzdDpBaXIgQ3JvdWNoOm1vZGlmaWVyXzgiOjAuMCwiVGVycm9yaXN0OkFpciBDcm91Y2g6bW9kaWZpZXJfOSI6MC4wLCJUZXJyb3Jpc3Q6QWlyIENyb3VjaDptb2RpZmllcl9tb2RlIjoiUmFuZG9taXplIiwiVGVycm9yaXN0OkFpciBDcm91Y2g6bW9kaWZpZXJfb2Zmc2V0IjowLjAsIlRlcnJvcmlzdDpBaXIgQ3JvdWNoOm1vZGlmaWVyX3N0ZXBzIjoyLjAsIlRlcnJvcmlzdDpBaXIgQ3JvdWNoOnJpZ2h0X2xpbWl0Ijo2MC4wLCJUZXJyb3Jpc3Q6QWlyIENyb3VjaDp5YXdfYWRkIjp0cnVlLCJUZXJyb3Jpc3Q6QWlyIENyb3VjaDp5YXdfbGVmdCI6LTIyLjAsIlRlcnJvcmlzdDpBaXIgQ3JvdWNoOnlhd19tb2RpZmllciI6IlNwaW4iLCJUZXJyb3Jpc3Q6QWlyIENyb3VjaDp5YXdfb2Zmc2V0IjowLjAsIlRlcnJvcmlzdDpBaXIgQ3JvdWNoOnlhd19yaWdodCI6NDQuMCwiVGVycm9yaXN0OkNyb3VjaGluZzpib2R5X21vZGUiOiJSYW5kb20iLCJUZXJyb3Jpc3Q6Q3JvdWNoaW5nOmJvZHlfdGlja3MiOjEyLjAsIlRlcnJvcmlzdDpDcm91Y2hpbmc6Ym9keV95YXciOnRydWUsIlRlcnJvcmlzdDpDcm91Y2hpbmc6Y2hva2VfMSI6MTQuMCwiVGVycm9yaXN0OkNyb3VjaGluZzpjaG9rZV8xMCI6MTIuMCwiVGVycm9yaXN0OkNyb3VjaGluZzpjaG9rZV8yIjoxNS4wLCJUZXJyb3Jpc3Q6Q3JvdWNoaW5nOmNob2tlXzMiOjEwLjAsIlRlcnJvcmlzdDpDcm91Y2hpbmc6Y2hva2VfNCI6MjAuMCwiVGVycm9yaXN0OkNyb3VjaGluZzpjaG9rZV81Ijo1LjAsIlRlcnJvcmlzdDpDcm91Y2hpbmc6Y2hva2VfNiI6MjIuMCwiVGVycm9yaXN0OkNyb3VjaGluZzpjaG9rZV83IjoyLjAsIlRlcnJvcmlzdDpDcm91Y2hpbmc6Y2hva2VfOCI6MjIuMCwiVGVycm9yaXN0OkNyb3VjaGluZzpjaG9rZV85Ijo3LjAsIlRlcnJvcmlzdDpDcm91Y2hpbmc6Y2hva2VfbW9kZSI6IlNlcXVlbnRpYWwiLCJUZXJyb3Jpc3Q6Q3JvdWNoaW5nOmNob2tlX3N0ZXBzIjoxMC4wLCJUZXJyb3Jpc3Q6Q3JvdWNoaW5nOmRlbGF5XzEiOjcuMCwiVGVycm9yaXN0OkNyb3VjaGluZzpkZWxheV8xMCI6MTAuMCwiVGVycm9yaXN0OkNyb3VjaGluZzpkZWxheV8yIjoyLjAsIlRlcnJvcmlzdDpDcm91Y2hpbmc6ZGVsYXlfMyI6OC4wLCJUZXJyb3Jpc3Q6Q3JvdWNoaW5nOmRlbGF5XzQiOjMuMCwiVGVycm9yaXN0OkNyb3VjaGluZzpkZWxheV81IjowLjAsIlRlcnJvcmlzdDpDcm91Y2hpbmc6ZGVsYXlfNiI6Ni4wLCJUZXJyb3Jpc3Q6Q3JvdWNoaW5nOmRlbGF5XzciOjkuMCwiVGVycm9yaXN0OkNyb3VjaGluZzpkZWxheV84Ijo3LjAsIlRlcnJvcmlzdDpDcm91Y2hpbmc6ZGVsYXlfOSI6MS4wLCJUZXJyb3Jpc3Q6Q3JvdWNoaW5nOmRlbGF5X21vZGUiOiJTZXF1ZW50aWFsIiwiVGVycm9yaXN0OkNyb3VjaGluZzpkZWxheV9zdGVwcyI6MTAuMCwiVGVycm9yaXN0OkNyb3VjaGluZzplbmFibGVkIjp0cnVlLCJUZXJyb3Jpc3Q6Q3JvdWNoaW5nOmZvcmNlX2RlZmVuc2l2ZSI6dHJ1ZSwiVGVycm9yaXN0OkNyb3VjaGluZzpsZWZ0X2xpbWl0Ijo2MC4wLCJUZXJyb3Jpc3Q6Q3JvdWNoaW5nOmxpbWl0XzEiOjYwLjAsIlRlcnJvcmlzdDpDcm91Y2hpbmc6bGltaXRfMiI6NTAuMCwiVGVycm9yaXN0OkNyb3VjaGluZzpsaW1pdF9tb2RlIjoiUmFuZG9tIiwiVGVycm9yaXN0OkNyb3VjaGluZzptb2RpZmllcl8xIjo2LjAsIlRlcnJvcmlzdDpDcm91Y2hpbmc6bW9kaWZpZXJfMTAiOjE5LjAsIlRlcnJvcmlzdDpDcm91Y2hpbmc6bW9kaWZpZXJfMiI6LTkuMCwiVGVycm9yaXN0OkNyb3VjaGluZzptb2RpZmllcl8zIjoyOC4wLCJUZXJyb3Jpc3Q6Q3JvdWNoaW5nOm1vZGlmaWVyXzQiOjMwLjAsIlRlcnJvcmlzdDpDcm91Y2hpbmc6bW9kaWZpZXJfNSI6MTEuMCwiVGVycm9yaXN0OkNyb3VjaGluZzptb2RpZmllcl82IjoxMC4wLCJUZXJyb3Jpc3Q6Q3JvdWNoaW5nOm1vZGlmaWVyXzciOi0yMS4wLCJUZXJyb3Jpc3Q6Q3JvdWNoaW5nOm1vZGlmaWVyXzgiOi0yNS4wLCJUZXJyb3Jpc3Q6Q3JvdWNoaW5nOm1vZGlmaWVyXzkiOjIyLjAsIlRlcnJvcmlzdDpDcm91Y2hpbmc6bW9kaWZpZXJfbW9kZSI6IlNlcXVlbnRpYWwiLCJUZXJyb3Jpc3Q6Q3JvdWNoaW5nOm1vZGlmaWVyX29mZnNldCI6MC4wLCJUZXJyb3Jpc3Q6Q3JvdWNoaW5nOm1vZGlmaWVyX3N0ZXBzIjoxMC4wLCJUZXJyb3Jpc3Q6Q3JvdWNoaW5nOnJpZ2h0X2xpbWl0Ijo2MC4wLCJUZXJyb3Jpc3Q6Q3JvdWNoaW5nOnlhd19hZGQiOnRydWUsIlRlcnJvcmlzdDpDcm91Y2hpbmc6eWF3X2xlZnQiOi0yMi4wLCJUZXJyb3Jpc3Q6Q3JvdWNoaW5nOnlhd19tb2RpZmllciI6IjUtV2F5IiwiVGVycm9yaXN0OkNyb3VjaGluZzp5YXdfb2Zmc2V0IjowLjAsIlRlcnJvcmlzdDpDcm91Y2hpbmc6eWF3X3JpZ2h0Ijo0NC4wLCJUZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmJvZHlfbW9kZSI6IlRpY2tzIiwiVGVycm9yaXN0OkZyZWVzdGFuZGluZzpib2R5X3RpY2tzIjoxNi4wLCJUZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmJvZHlfeWF3Ijp0cnVlLCJUZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmNob2tlXzEiOjE2LjAsIlRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6Y2hva2VfMTAiOjE2LjAsIlRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6Y2hva2VfMiI6MTYuMCwiVGVycm9yaXN0OkZyZWVzdGFuZGluZzpjaG9rZV8zIjoxNi4wLCJUZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmNob2tlXzQiOjE2LjAsIlRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6Y2hva2VfNSI6MTYuMCwiVGVycm9yaXN0OkZyZWVzdGFuZGluZzpjaG9rZV82IjoxNi4wLCJUZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmNob2tlXzciOjE2LjAsIlRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6Y2hva2VfOCI6MTYuMCwiVGVycm9yaXN0OkZyZWVzdGFuZGluZzpjaG9rZV85IjoxNi4wLCJUZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmNob2tlX21vZGUiOiJEZWZhdWx0IiwiVGVycm9yaXN0OkZyZWVzdGFuZGluZzpjaG9rZV9zdGVwcyI6Mi4wLCJUZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmRlbGF5XzEiOjIuMCwiVGVycm9yaXN0OkZyZWVzdGFuZGluZzpkZWxheV8xMCI6MC4wLCJUZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmRlbGF5XzIiOjYuMCwiVGVycm9yaXN0OkZyZWVzdGFuZGluZzpkZWxheV8zIjowLjAsIlRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6ZGVsYXlfNCI6MC4wLCJUZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmRlbGF5XzUiOjAuMCwiVGVycm9yaXN0OkZyZWVzdGFuZGluZzpkZWxheV82IjowLjAsIlRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6ZGVsYXlfNyI6MC4wLCJUZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmRlbGF5XzgiOjAuMCwiVGVycm9yaXN0OkZyZWVzdGFuZGluZzpkZWxheV85IjowLjAsIlRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6ZGVsYXlfbW9kZSI6IlJhbmRvbWl6ZSIsIlRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6ZGVsYXlfc3RlcHMiOjIuMCwiVGVycm9yaXN0OkZyZWVzdGFuZGluZzplbmFibGVkIjp0cnVlLCJUZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmZvcmNlX2RlZmVuc2l2ZSI6ZmFsc2UsIlRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6bGVmdF9saW1pdCI6NjAuMCwiVGVycm9yaXN0OkZyZWVzdGFuZGluZzpsaW1pdF8xIjo2MC4wLCJUZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmxpbWl0XzIiOjQ4LjAsIlRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6bGltaXRfbW9kZSI6IlN3aXRjaCIsIlRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6bW9kaWZpZXJfMSI6MC4wLCJUZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOm1vZGlmaWVyXzEwIjowLjAsIlRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6bW9kaWZpZXJfMiI6MC4wLCJUZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOm1vZGlmaWVyXzMiOjAuMCwiVGVycm9yaXN0OkZyZWVzdGFuZGluZzptb2RpZmllcl80IjowLjAsIlRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6bW9kaWZpZXJfNSI6MC4wLCJUZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOm1vZGlmaWVyXzYiOjAuMCwiVGVycm9yaXN0OkZyZWVzdGFuZGluZzptb2RpZmllcl83IjowLjAsIlRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6bW9kaWZpZXJfOCI6MC4wLCJUZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOm1vZGlmaWVyXzkiOjAuMCwiVGVycm9yaXN0OkZyZWVzdGFuZGluZzptb2RpZmllcl9tb2RlIjoiRGVmYXVsdCIsIlRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6bW9kaWZpZXJfb2Zmc2V0IjowLjAsIlRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6bW9kaWZpZXJfc3RlcHMiOjIuMCwiVGVycm9yaXN0OkZyZWVzdGFuZGluZzpyaWdodF9saW1pdCI6NjAuMCwiVGVycm9yaXN0OkZyZWVzdGFuZGluZzp5YXdfYWRkIjp0cnVlLCJUZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOnlhd19sZWZ0IjotMTYuMCwiVGVycm9yaXN0OkZyZWVzdGFuZGluZzp5YXdfbW9kaWZpZXIiOiJEaXNhYmxlZCIsIlRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6eWF3X29mZnNldCI6MC4wLCJUZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOnlhd19yaWdodCI6NDkuMCwiVGVycm9yaXN0OkluIEFpcjpib2R5X21vZGUiOiJEZWZhdWx0IiwiVGVycm9yaXN0OkluIEFpcjpib2R5X3RpY2tzIjo0LjAsIlRlcnJvcmlzdDpJbiBBaXI6Ym9keV95YXciOnRydWUsIlRlcnJvcmlzdDpJbiBBaXI6Y2hva2VfMSI6MTYuMCwiVGVycm9yaXN0OkluIEFpcjpjaG9rZV8xMCI6MTYuMCwiVGVycm9yaXN0OkluIEFpcjpjaG9rZV8yIjoxNi4wLCJUZXJyb3Jpc3Q6SW4gQWlyOmNob2tlXzMiOjE2LjAsIlRlcnJvcmlzdDpJbiBBaXI6Y2hva2VfNCI6MTYuMCwiVGVycm9yaXN0OkluIEFpcjpjaG9rZV81IjoxNi4wLCJUZXJyb3Jpc3Q6SW4gQWlyOmNob2tlXzYiOjE2LjAsIlRlcnJvcmlzdDpJbiBBaXI6Y2hva2VfNyI6MTYuMCwiVGVycm9yaXN0OkluIEFpcjpjaG9rZV84IjoxNi4wLCJUZXJyb3Jpc3Q6SW4gQWlyOmNob2tlXzkiOjE2LjAsIlRlcnJvcmlzdDpJbiBBaXI6Y2hva2VfbW9kZSI6IkRlZmF1bHQiLCJUZXJyb3Jpc3Q6SW4gQWlyOmNob2tlX3N0ZXBzIjoyLjAsIlRlcnJvcmlzdDpJbiBBaXI6ZGVsYXlfMSI6NC4wLCJUZXJyb3Jpc3Q6SW4gQWlyOmRlbGF5XzEwIjowLjAsIlRlcnJvcmlzdDpJbiBBaXI6ZGVsYXlfMiI6MC4wLCJUZXJyb3Jpc3Q6SW4gQWlyOmRlbGF5XzMiOjAuMCwiVGVycm9yaXN0OkluIEFpcjpkZWxheV80IjowLjAsIlRlcnJvcmlzdDpJbiBBaXI6ZGVsYXlfNSI6MC4wLCJUZXJyb3Jpc3Q6SW4gQWlyOmRlbGF5XzYiOjAuMCwiVGVycm9yaXN0OkluIEFpcjpkZWxheV83IjowLjAsIlRlcnJvcmlzdDpJbiBBaXI6ZGVsYXlfOCI6MC4wLCJUZXJyb3Jpc3Q6SW4gQWlyOmRlbGF5XzkiOjAuMCwiVGVycm9yaXN0OkluIEFpcjpkZWxheV9tb2RlIjoiRGVmYXVsdCIsIlRlcnJvcmlzdDpJbiBBaXI6ZGVsYXlfc3RlcHMiOjIuMCwiVGVycm9yaXN0OkluIEFpcjplbmFibGVkIjp0cnVlLCJUZXJyb3Jpc3Q6SW4gQWlyOmZvcmNlX2RlZmVuc2l2ZSI6dHJ1ZSwiVGVycm9yaXN0OkluIEFpcjpsZWZ0X2xpbWl0Ijo2MC4wLCJUZXJyb3Jpc3Q6SW4gQWlyOmxpbWl0XzEiOjYwLjAsIlRlcnJvcmlzdDpJbiBBaXI6bGltaXRfMiI6NjAuMCwiVGVycm9yaXN0OkluIEFpcjpsaW1pdF9tb2RlIjoiRGVmYXVsdCIsIlRlcnJvcmlzdDpJbiBBaXI6bW9kaWZpZXJfMSI6MC4wLCJUZXJyb3Jpc3Q6SW4gQWlyOm1vZGlmaWVyXzEwIjowLjAsIlRlcnJvcmlzdDpJbiBBaXI6bW9kaWZpZXJfMiI6MC4wLCJUZXJyb3Jpc3Q6SW4gQWlyOm1vZGlmaWVyXzMiOjAuMCwiVGVycm9yaXN0OkluIEFpcjptb2RpZmllcl80IjowLjAsIlRlcnJvcmlzdDpJbiBBaXI6bW9kaWZpZXJfNSI6MC4wLCJUZXJyb3Jpc3Q6SW4gQWlyOm1vZGlmaWVyXzYiOjAuMCwiVGVycm9yaXN0OkluIEFpcjptb2RpZmllcl83IjowLjAsIlRlcnJvcmlzdDpJbiBBaXI6bW9kaWZpZXJfOCI6MC4wLCJUZXJyb3Jpc3Q6SW4gQWlyOm1vZGlmaWVyXzkiOjAuMCwiVGVycm9yaXN0OkluIEFpcjptb2RpZmllcl9tb2RlIjoiRGVmYXVsdCIsIlRlcnJvcmlzdDpJbiBBaXI6bW9kaWZpZXJfb2Zmc2V0IjowLjAsIlRlcnJvcmlzdDpJbiBBaXI6bW9kaWZpZXJfc3RlcHMiOjIuMCwiVGVycm9yaXN0OkluIEFpcjpyaWdodF9saW1pdCI6NjAuMCwiVGVycm9yaXN0OkluIEFpcjp5YXdfYWRkIjp0cnVlLCJUZXJyb3Jpc3Q6SW4gQWlyOnlhd19sZWZ0IjotMjIuMCwiVGVycm9yaXN0OkluIEFpcjp5YXdfbW9kaWZpZXIiOiJEaXNhYmxlZCIsIlRlcnJvcmlzdDpJbiBBaXI6eWF3X29mZnNldCI6MC4wLCJUZXJyb3Jpc3Q6SW4gQWlyOnlhd19yaWdodCI6MzguMCwiVGVycm9yaXN0Ok1hbnVhbCBZYXc6Ym9keV9tb2RlIjoiRGVmYXVsdCIsIlRlcnJvcmlzdDpNYW51YWwgWWF3OmJvZHlfdGlja3MiOjQuMCwiVGVycm9yaXN0Ok1hbnVhbCBZYXc6Ym9keV95YXciOnRydWUsIlRlcnJvcmlzdDpNYW51YWwgWWF3OmNob2tlXzEiOjE2LjAsIlRlcnJvcmlzdDpNYW51YWwgWWF3OmNob2tlXzEwIjoxNi4wLCJUZXJyb3Jpc3Q6TWFudWFsIFlhdzpjaG9rZV8yIjoxNi4wLCJUZXJyb3Jpc3Q6TWFudWFsIFlhdzpjaG9rZV8zIjoxNi4wLCJUZXJyb3Jpc3Q6TWFudWFsIFlhdzpjaG9rZV80IjoxNi4wLCJUZXJyb3Jpc3Q6TWFudWFsIFlhdzpjaG9rZV81IjoxNi4wLCJUZXJyb3Jpc3Q6TWFudWFsIFlhdzpjaG9rZV82IjoxNi4wLCJUZXJyb3Jpc3Q6TWFudWFsIFlhdzpjaG9rZV83IjoxNi4wLCJUZXJyb3Jpc3Q6TWFudWFsIFlhdzpjaG9rZV84IjoxNi4wLCJUZXJyb3Jpc3Q6TWFudWFsIFlhdzpjaG9rZV85IjoxNi4wLCJUZXJyb3Jpc3Q6TWFudWFsIFlhdzpjaG9rZV9tb2RlIjoiRGVmYXVsdCIsIlRlcnJvcmlzdDpNYW51YWwgWWF3OmNob2tlX3N0ZXBzIjoyLjAsIlRlcnJvcmlzdDpNYW51YWwgWWF3OmRlbGF5XzEiOjAuMCwiVGVycm9yaXN0Ok1hbnVhbCBZYXc6ZGVsYXlfMTAiOjAuMCwiVGVycm9yaXN0Ok1hbnVhbCBZYXc6ZGVsYXlfMiI6MC4wLCJUZXJyb3Jpc3Q6TWFudWFsIFlhdzpkZWxheV8zIjowLjAsIlRlcnJvcmlzdDpNYW51YWwgWWF3OmRlbGF5XzQiOjAuMCwiVGVycm9yaXN0Ok1hbnVhbCBZYXc6ZGVsYXlfNSI6MC4wLCJUZXJyb3Jpc3Q6TWFudWFsIFlhdzpkZWxheV82IjowLjAsIlRlcnJvcmlzdDpNYW51YWwgWWF3OmRlbGF5XzciOjAuMCwiVGVycm9yaXN0Ok1hbnVhbCBZYXc6ZGVsYXlfOCI6MC4wLCJUZXJyb3Jpc3Q6TWFudWFsIFlhdzpkZWxheV85IjowLjAsIlRlcnJvcmlzdDpNYW51YWwgWWF3OmRlbGF5X21vZGUiOiJEZWZhdWx0IiwiVGVycm9yaXN0Ok1hbnVhbCBZYXc6ZGVsYXlfc3RlcHMiOjIuMCwiVGVycm9yaXN0Ok1hbnVhbCBZYXc6ZW5hYmxlZCI6dHJ1ZSwiVGVycm9yaXN0Ok1hbnVhbCBZYXc6Zm9yY2VfZGVmZW5zaXZlIjpmYWxzZSwiVGVycm9yaXN0Ok1hbnVhbCBZYXc6bGVmdF9saW1pdCI6NjAuMCwiVGVycm9yaXN0Ok1hbnVhbCBZYXc6bGltaXRfMSI6NjAuMCwiVGVycm9yaXN0Ok1hbnVhbCBZYXc6bGltaXRfMiI6NjAuMCwiVGVycm9yaXN0Ok1hbnVhbCBZYXc6bGltaXRfbW9kZSI6IkRlZmF1bHQiLCJUZXJyb3Jpc3Q6TWFudWFsIFlhdzptb2RpZmllcl8xIjowLjAsIlRlcnJvcmlzdDpNYW51YWwgWWF3Om1vZGlmaWVyXzEwIjowLjAsIlRlcnJvcmlzdDpNYW51YWwgWWF3Om1vZGlmaWVyXzIiOjAuMCwiVGVycm9yaXN0Ok1hbnVhbCBZYXc6bW9kaWZpZXJfMyI6MC4wLCJUZXJyb3Jpc3Q6TWFudWFsIFlhdzptb2RpZmllcl80IjowLjAsIlRlcnJvcmlzdDpNYW51YWwgWWF3Om1vZGlmaWVyXzUiOjAuMCwiVGVycm9yaXN0Ok1hbnVhbCBZYXc6bW9kaWZpZXJfNiI6MC4wLCJUZXJyb3Jpc3Q6TWFudWFsIFlhdzptb2RpZmllcl83IjowLjAsIlRlcnJvcmlzdDpNYW51YWwgWWF3Om1vZGlmaWVyXzgiOjAuMCwiVGVycm9yaXN0Ok1hbnVhbCBZYXc6bW9kaWZpZXJfOSI6MC4wLCJUZXJyb3Jpc3Q6TWFudWFsIFlhdzptb2RpZmllcl9tb2RlIjoiRGVmYXVsdCIsIlRlcnJvcmlzdDpNYW51YWwgWWF3Om1vZGlmaWVyX29mZnNldCI6MC4wLCJUZXJyb3Jpc3Q6TWFudWFsIFlhdzptb2RpZmllcl9zdGVwcyI6Mi4wLCJUZXJyb3Jpc3Q6TWFudWFsIFlhdzpyaWdodF9saW1pdCI6NjAuMCwiVGVycm9yaXN0Ok1hbnVhbCBZYXc6eWF3X2FkZCI6dHJ1ZSwiVGVycm9yaXN0Ok1hbnVhbCBZYXc6eWF3X2xlZnQiOjAuMCwiVGVycm9yaXN0Ok1hbnVhbCBZYXc6eWF3X21vZGlmaWVyIjoiRGlzYWJsZWQiLCJUZXJyb3Jpc3Q6TWFudWFsIFlhdzp5YXdfb2Zmc2V0IjowLjAsIlRlcnJvcmlzdDpNYW51YWwgWWF3Onlhd19yaWdodCI6MC4wLCJUZXJyb3Jpc3Q6UnVubmluZzpib2R5X21vZGUiOiJEZWZhdWx0IiwiVGVycm9yaXN0OlJ1bm5pbmc6Ym9keV90aWNrcyI6NC4wLCJUZXJyb3Jpc3Q6UnVubmluZzpib2R5X3lhdyI6dHJ1ZSwiVGVycm9yaXN0OlJ1bm5pbmc6Y2hva2VfMSI6MS4wLCJUZXJyb3Jpc3Q6UnVubmluZzpjaG9rZV8xMCI6MTYuMCwiVGVycm9yaXN0OlJ1bm5pbmc6Y2hva2VfMiI6MjIuMCwiVGVycm9yaXN0OlJ1bm5pbmc6Y2hva2VfMyI6MTYuMCwiVGVycm9yaXN0OlJ1bm5pbmc6Y2hva2VfNCI6MTYuMCwiVGVycm9yaXN0OlJ1bm5pbmc6Y2hva2VfNSI6MTYuMCwiVGVycm9yaXN0OlJ1bm5pbmc6Y2hva2VfNiI6MTYuMCwiVGVycm9yaXN0OlJ1bm5pbmc6Y2hva2VfNyI6MTYuMCwiVGVycm9yaXN0OlJ1bm5pbmc6Y2hva2VfOCI6MTYuMCwiVGVycm9yaXN0OlJ1bm5pbmc6Y2hva2VfOSI6MTYuMCwiVGVycm9yaXN0OlJ1bm5pbmc6Y2hva2VfbW9kZSI6IlJhbmRvbWl6ZSIsIlRlcnJvcmlzdDpSdW5uaW5nOmNob2tlX3N0ZXBzIjoyLjAsIlRlcnJvcmlzdDpSdW5uaW5nOmRlbGF5XzEiOjEuMCwiVGVycm9yaXN0OlJ1bm5pbmc6ZGVsYXlfMTAiOjAuMCwiVGVycm9yaXN0OlJ1bm5pbmc6ZGVsYXlfMiI6MTYuMCwiVGVycm9yaXN0OlJ1bm5pbmc6ZGVsYXlfMyI6My4wLCJUZXJyb3Jpc3Q6UnVubmluZzpkZWxheV80Ijo0LjAsIlRlcnJvcmlzdDpSdW5uaW5nOmRlbGF5XzUiOjE2LjAsIlRlcnJvcmlzdDpSdW5uaW5nOmRlbGF5XzYiOjAuMCwiVGVycm9yaXN0OlJ1bm5pbmc6ZGVsYXlfNyI6MC4wLCJUZXJyb3Jpc3Q6UnVubmluZzpkZWxheV84IjowLjAsIlRlcnJvcmlzdDpSdW5uaW5nOmRlbGF5XzkiOjAuMCwiVGVycm9yaXN0OlJ1bm5pbmc6ZGVsYXlfbW9kZSI6IlNlcXVlbnRpYWwiLCJUZXJyb3Jpc3Q6UnVubmluZzpkZWxheV9zdGVwcyI6NS4wLCJUZXJyb3Jpc3Q6UnVubmluZzplbmFibGVkIjp0cnVlLCJUZXJyb3Jpc3Q6UnVubmluZzpmb3JjZV9kZWZlbnNpdmUiOnRydWUsIlRlcnJvcmlzdDpSdW5uaW5nOmxlZnRfbGltaXQiOjYwLjAsIlRlcnJvcmlzdDpSdW5uaW5nOmxpbWl0XzEiOjYwLjAsIlRlcnJvcmlzdDpSdW5uaW5nOmxpbWl0XzIiOjQ1LjAsIlRlcnJvcmlzdDpSdW5uaW5nOmxpbWl0X21vZGUiOiJSYW5kb20iLCJUZXJyb3Jpc3Q6UnVubmluZzptb2RpZmllcl8xIjowLjAsIlRlcnJvcmlzdDpSdW5uaW5nOm1vZGlmaWVyXzEwIjowLjAsIlRlcnJvcmlzdDpSdW5uaW5nOm1vZGlmaWVyXzIiOjAuMCwiVGVycm9yaXN0OlJ1bm5pbmc6bW9kaWZpZXJfMyI6MC4wLCJUZXJyb3Jpc3Q6UnVubmluZzptb2RpZmllcl80IjowLjAsIlRlcnJvcmlzdDpSdW5uaW5nOm1vZGlmaWVyXzUiOjAuMCwiVGVycm9yaXN0OlJ1bm5pbmc6bW9kaWZpZXJfNiI6MC4wLCJUZXJyb3Jpc3Q6UnVubmluZzptb2RpZmllcl83IjowLjAsIlRlcnJvcmlzdDpSdW5uaW5nOm1vZGlmaWVyXzgiOjAuMCwiVGVycm9yaXN0OlJ1bm5pbmc6bW9kaWZpZXJfOSI6MC4wLCJUZXJyb3Jpc3Q6UnVubmluZzptb2RpZmllcl9tb2RlIjoiRGVmYXVsdCIsIlRlcnJvcmlzdDpSdW5uaW5nOm1vZGlmaWVyX29mZnNldCI6MC4wLCJUZXJyb3Jpc3Q6UnVubmluZzptb2RpZmllcl9zdGVwcyI6Mi4wLCJUZXJyb3Jpc3Q6UnVubmluZzpyaWdodF9saW1pdCI6NjAuMCwiVGVycm9yaXN0OlJ1bm5pbmc6eWF3X2FkZCI6dHJ1ZSwiVGVycm9yaXN0OlJ1bm5pbmc6eWF3X2xlZnQiOi0yNy4wLCJUZXJyb3Jpc3Q6UnVubmluZzp5YXdfbW9kaWZpZXIiOiJEaXNhYmxlZCIsIlRlcnJvcmlzdDpSdW5uaW5nOnlhd19vZmZzZXQiOi01LjAsIlRlcnJvcmlzdDpSdW5uaW5nOnlhd19yaWdodCI6NDQuMCwiVGVycm9yaXN0OlNuZWFraW5nOmJvZHlfbW9kZSI6IlJhbmRvbSIsIlRlcnJvcmlzdDpTbmVha2luZzpib2R5X3RpY2tzIjoxNi4wLCJUZXJyb3Jpc3Q6U25lYWtpbmc6Ym9keV95YXciOnRydWUsIlRlcnJvcmlzdDpTbmVha2luZzpjaG9rZV8xIjoxLjAsIlRlcnJvcmlzdDpTbmVha2luZzpjaG9rZV8xMCI6MjIuMCwiVGVycm9yaXN0OlNuZWFraW5nOmNob2tlXzIiOjE0LjAsIlRlcnJvcmlzdDpTbmVha2luZzpjaG9rZV8zIjo5LjAsIlRlcnJvcmlzdDpTbmVha2luZzpjaG9rZV80IjoyMi4wLCJUZXJyb3Jpc3Q6U25lYWtpbmc6Y2hva2VfNSI6MTIuMCwiVGVycm9yaXN0OlNuZWFraW5nOmNob2tlXzYiOjIwLjAsIlRlcnJvcmlzdDpTbmVha2luZzpjaG9rZV83Ijo4LjAsIlRlcnJvcmlzdDpTbmVha2luZzpjaG9rZV84IjoyMi4wLCJUZXJyb3Jpc3Q6U25lYWtpbmc6Y2hva2VfOSI6OC4wLCJUZXJyb3Jpc3Q6U25lYWtpbmc6Y2hva2VfbW9kZSI6IlNlcXVlbnRpYWwiLCJUZXJyb3Jpc3Q6U25lYWtpbmc6Y2hva2Vfc3RlcHMiOjEwLjAsIlRlcnJvcmlzdDpTbmVha2luZzpkZWxheV8xIjo3LjAsIlRlcnJvcmlzdDpTbmVha2luZzpkZWxheV8xMCI6MC4wLCJUZXJyb3Jpc3Q6U25lYWtpbmc6ZGVsYXlfMiI6Ni4wLCJUZXJyb3Jpc3Q6U25lYWtpbmc6ZGVsYXlfMyI6NS4wLCJUZXJyb3Jpc3Q6U25lYWtpbmc6ZGVsYXlfNCI6OC4wLCJUZXJyb3Jpc3Q6U25lYWtpbmc6ZGVsYXlfNSI6MC4wLCJUZXJyb3Jpc3Q6U25lYWtpbmc6ZGVsYXlfNiI6NS4wLCJUZXJyb3Jpc3Q6U25lYWtpbmc6ZGVsYXlfNyI6Mi4wLCJUZXJyb3Jpc3Q6U25lYWtpbmc6ZGVsYXlfOCI6My4wLCJUZXJyb3Jpc3Q6U25lYWtpbmc6ZGVsYXlfOSI6Mi4wLCJUZXJyb3Jpc3Q6U25lYWtpbmc6ZGVsYXlfbW9kZSI6IlNlcXVlbnRpYWwiLCJUZXJyb3Jpc3Q6U25lYWtpbmc6ZGVsYXlfc3RlcHMiOjEwLjAsIlRlcnJvcmlzdDpTbmVha2luZzplbmFibGVkIjp0cnVlLCJUZXJyb3Jpc3Q6U25lYWtpbmc6Zm9yY2VfZGVmZW5zaXZlIjp0cnVlLCJUZXJyb3Jpc3Q6U25lYWtpbmc6bGVmdF9saW1pdCI6NjAuMCwiVGVycm9yaXN0OlNuZWFraW5nOmxpbWl0XzEiOjYwLjAsIlRlcnJvcmlzdDpTbmVha2luZzpsaW1pdF8yIjo0Ny4wLCJUZXJyb3Jpc3Q6U25lYWtpbmc6bGltaXRfbW9kZSI6IlJhbmRvbSIsIlRlcnJvcmlzdDpTbmVha2luZzptb2RpZmllcl8xIjotMjYuMCwiVGVycm9yaXN0OlNuZWFraW5nOm1vZGlmaWVyXzEwIjotNC4wLCJUZXJyb3Jpc3Q6U25lYWtpbmc6bW9kaWZpZXJfMiI6LTE2LjAsIlRlcnJvcmlzdDpTbmVha2luZzptb2RpZmllcl8zIjotMjMuMCwiVGVycm9yaXN0OlNuZWFraW5nOm1vZGlmaWVyXzQiOi0xMC4wLCJUZXJyb3Jpc3Q6U25lYWtpbmc6bW9kaWZpZXJfNSI6MTEuMCwiVGVycm9yaXN0OlNuZWFraW5nOm1vZGlmaWVyXzYiOi0xNC4wLCJUZXJyb3Jpc3Q6U25lYWtpbmc6bW9kaWZpZXJfNyI6LTI3LjAsIlRlcnJvcmlzdDpTbmVha2luZzptb2RpZmllcl84IjotMjIuMCwiVGVycm9yaXN0OlNuZWFraW5nOm1vZGlmaWVyXzkiOi0yMC4wLCJUZXJyb3Jpc3Q6U25lYWtpbmc6bW9kaWZpZXJfbW9kZSI6IlNlcXVlbnRpYWwiLCJUZXJyb3Jpc3Q6U25lYWtpbmc6bW9kaWZpZXJfb2Zmc2V0IjowLjAsIlRlcnJvcmlzdDpTbmVha2luZzptb2RpZmllcl9zdGVwcyI6MTAuMCwiVGVycm9yaXN0OlNuZWFraW5nOnJpZ2h0X2xpbWl0Ijo2MC4wLCJUZXJyb3Jpc3Q6U25lYWtpbmc6eWF3X2FkZCI6dHJ1ZSwiVGVycm9yaXN0OlNuZWFraW5nOnlhd19sZWZ0IjotMjIuMCwiVGVycm9yaXN0OlNuZWFraW5nOnlhd19tb2RpZmllciI6IjUtV2F5IiwiVGVycm9yaXN0OlNuZWFraW5nOnlhd19vZmZzZXQiOjE1LjAsIlRlcnJvcmlzdDpTbmVha2luZzp5YXdfcmlnaHQiOjMzLjAsIlRlcnJvcmlzdDpTdGFuZGluZzpib2R5X21vZGUiOiJSYW5kb20iLCJUZXJyb3Jpc3Q6U3RhbmRpbmc6Ym9keV90aWNrcyI6MTIuMCwiVGVycm9yaXN0OlN0YW5kaW5nOmJvZHlfeWF3Ijp0cnVlLCJUZXJyb3Jpc3Q6U3RhbmRpbmc6Y2hva2VfMSI6MTYuMCwiVGVycm9yaXN0OlN0YW5kaW5nOmNob2tlXzEwIjoxNi4wLCJUZXJyb3Jpc3Q6U3RhbmRpbmc6Y2hva2VfMiI6MTYuMCwiVGVycm9yaXN0OlN0YW5kaW5nOmNob2tlXzMiOjE2LjAsIlRlcnJvcmlzdDpTdGFuZGluZzpjaG9rZV80IjoxNi4wLCJUZXJyb3Jpc3Q6U3RhbmRpbmc6Y2hva2VfNSI6MTYuMCwiVGVycm9yaXN0OlN0YW5kaW5nOmNob2tlXzYiOjE2LjAsIlRlcnJvcmlzdDpTdGFuZGluZzpjaG9rZV83IjoxNi4wLCJUZXJyb3Jpc3Q6U3RhbmRpbmc6Y2hva2VfOCI6MTYuMCwiVGVycm9yaXN0OlN0YW5kaW5nOmNob2tlXzkiOjE2LjAsIlRlcnJvcmlzdDpTdGFuZGluZzpjaG9rZV9tb2RlIjoiRGVmYXVsdCIsIlRlcnJvcmlzdDpTdGFuZGluZzpjaG9rZV9zdGVwcyI6Mi4wLCJUZXJyb3Jpc3Q6U3RhbmRpbmc6ZGVsYXlfMSI6MC4wLCJUZXJyb3Jpc3Q6U3RhbmRpbmc6ZGVsYXlfMTAiOjAuMCwiVGVycm9yaXN0OlN0YW5kaW5nOmRlbGF5XzIiOjAuMCwiVGVycm9yaXN0OlN0YW5kaW5nOmRlbGF5XzMiOjAuMCwiVGVycm9yaXN0OlN0YW5kaW5nOmRlbGF5XzQiOjAuMCwiVGVycm9yaXN0OlN0YW5kaW5nOmRlbGF5XzUiOjAuMCwiVGVycm9yaXN0OlN0YW5kaW5nOmRlbGF5XzYiOjAuMCwiVGVycm9yaXN0OlN0YW5kaW5nOmRlbGF5XzciOjAuMCwiVGVycm9yaXN0OlN0YW5kaW5nOmRlbGF5XzgiOjAuMCwiVGVycm9yaXN0OlN0YW5kaW5nOmRlbGF5XzkiOjAuMCwiVGVycm9yaXN0OlN0YW5kaW5nOmRlbGF5X21vZGUiOiJEZWZhdWx0IiwiVGVycm9yaXN0OlN0YW5kaW5nOmRlbGF5X3N0ZXBzIjoyLjAsIlRlcnJvcmlzdDpTdGFuZGluZzplbmFibGVkIjp0cnVlLCJUZXJyb3Jpc3Q6U3RhbmRpbmc6Zm9yY2VfZGVmZW5zaXZlIjpmYWxzZSwiVGVycm9yaXN0OlN0YW5kaW5nOmxlZnRfbGltaXQiOjYwLjAsIlRlcnJvcmlzdDpTdGFuZGluZzpsaW1pdF8xIjo2MC4wLCJUZXJyb3Jpc3Q6U3RhbmRpbmc6bGltaXRfMiI6NDkuMCwiVGVycm9yaXN0OlN0YW5kaW5nOmxpbWl0X21vZGUiOiJSYW5kb20iLCJUZXJyb3Jpc3Q6U3RhbmRpbmc6bW9kaWZpZXJfMSI6MC4wLCJUZXJyb3Jpc3Q6U3RhbmRpbmc6bW9kaWZpZXJfMTAiOjAuMCwiVGVycm9yaXN0OlN0YW5kaW5nOm1vZGlmaWVyXzIiOjAuMCwiVGVycm9yaXN0OlN0YW5kaW5nOm1vZGlmaWVyXzMiOjAuMCwiVGVycm9yaXN0OlN0YW5kaW5nOm1vZGlmaWVyXzQiOjAuMCwiVGVycm9yaXN0OlN0YW5kaW5nOm1vZGlmaWVyXzUiOjAuMCwiVGVycm9yaXN0OlN0YW5kaW5nOm1vZGlmaWVyXzYiOjAuMCwiVGVycm9yaXN0OlN0YW5kaW5nOm1vZGlmaWVyXzciOjAuMCwiVGVycm9yaXN0OlN0YW5kaW5nOm1vZGlmaWVyXzgiOjAuMCwiVGVycm9yaXN0OlN0YW5kaW5nOm1vZGlmaWVyXzkiOjAuMCwiVGVycm9yaXN0OlN0YW5kaW5nOm1vZGlmaWVyX21vZGUiOiJEZWZhdWx0IiwiVGVycm9yaXN0OlN0YW5kaW5nOm1vZGlmaWVyX29mZnNldCI6MC4wLCJUZXJyb3Jpc3Q6U3RhbmRpbmc6bW9kaWZpZXJfc3RlcHMiOjIuMCwiVGVycm9yaXN0OlN0YW5kaW5nOnJpZ2h0X2xpbWl0Ijo2MC4wLCJUZXJyb3Jpc3Q6U3RhbmRpbmc6eWF3X2FkZCI6dHJ1ZSwiVGVycm9yaXN0OlN0YW5kaW5nOnlhd19sZWZ0IjotMTYuMCwiVGVycm9yaXN0OlN0YW5kaW5nOnlhd19tb2RpZmllciI6IkRpc2FibGVkIiwiVGVycm9yaXN0OlN0YW5kaW5nOnlhd19vZmZzZXQiOi01LjAsIlRlcnJvcmlzdDpTdGFuZGluZzp5YXdfcmlnaHQiOjQ0LjAsIlRlcnJvcmlzdDpXYWxraW5nOmJvZHlfbW9kZSI6IlJhbmRvbSIsIlRlcnJvcmlzdDpXYWxraW5nOmJvZHlfdGlja3MiOjE2LjAsIlRlcnJvcmlzdDpXYWxraW5nOmJvZHlfeWF3Ijp0cnVlLCJUZXJyb3Jpc3Q6V2Fsa2luZzpjaG9rZV8xIjoxOC4wLCJUZXJyb3Jpc3Q6V2Fsa2luZzpjaG9rZV8xMCI6MTMuMCwiVGVycm9yaXN0OldhbGtpbmc6Y2hva2VfMiI6MTAuMCwiVGVycm9yaXN0OldhbGtpbmc6Y2hva2VfMyI6MTAuMCwiVGVycm9yaXN0OldhbGtpbmc6Y2hva2VfNCI6MjIuMCwiVGVycm9yaXN0OldhbGtpbmc6Y2hva2VfNSI6Mi4wLCJUZXJyb3Jpc3Q6V2Fsa2luZzpjaG9rZV82Ijo4LjAsIlRlcnJvcmlzdDpXYWxraW5nOmNob2tlXzciOjIyLjAsIlRlcnJvcmlzdDpXYWxraW5nOmNob2tlXzgiOjcuMCwiVGVycm9yaXN0OldhbGtpbmc6Y2hva2VfOSI6MjIuMCwiVGVycm9yaXN0OldhbGtpbmc6Y2hva2VfbW9kZSI6IlNlcXVlbnRpYWwiLCJUZXJyb3Jpc3Q6V2Fsa2luZzpjaG9rZV9zdGVwcyI6MTAuMCwiVGVycm9yaXN0OldhbGtpbmc6ZGVsYXlfMSI6MS4wLCJUZXJyb3Jpc3Q6V2Fsa2luZzpkZWxheV8xMCI6OS4wLCJUZXJyb3Jpc3Q6V2Fsa2luZzpkZWxheV8yIjo2LjAsIlRlcnJvcmlzdDpXYWxraW5nOmRlbGF5XzMiOjUuMCwiVGVycm9yaXN0OldhbGtpbmc6ZGVsYXlfNCI6MTAuMCwiVGVycm9yaXN0OldhbGtpbmc6ZGVsYXlfNSI6NS4wLCJUZXJyb3Jpc3Q6V2Fsa2luZzpkZWxheV82Ijo0LjAsIlRlcnJvcmlzdDpXYWxraW5nOmRlbGF5XzciOjkuMCwiVGVycm9yaXN0OldhbGtpbmc6ZGVsYXlfOCI6Ny4wLCJUZXJyb3Jpc3Q6V2Fsa2luZzpkZWxheV85Ijo4LjAsIlRlcnJvcmlzdDpXYWxraW5nOmRlbGF5X21vZGUiOiJTZXF1ZW50aWFsIiwiVGVycm9yaXN0OldhbGtpbmc6ZGVsYXlfc3RlcHMiOjEwLjAsIlRlcnJvcmlzdDpXYWxraW5nOmVuYWJsZWQiOnRydWUsIlRlcnJvcmlzdDpXYWxraW5nOmZvcmNlX2RlZmVuc2l2ZSI6dHJ1ZSwiVGVycm9yaXN0OldhbGtpbmc6bGVmdF9saW1pdCI6NjAuMCwiVGVycm9yaXN0OldhbGtpbmc6bGltaXRfMSI6NjAuMCwiVGVycm9yaXN0OldhbGtpbmc6bGltaXRfMiI6NTAuMCwiVGVycm9yaXN0OldhbGtpbmc6bGltaXRfbW9kZSI6IlJhbmRvbSIsIlRlcnJvcmlzdDpXYWxraW5nOm1vZGlmaWVyXzEiOjYuMCwiVGVycm9yaXN0OldhbGtpbmc6bW9kaWZpZXJfMTAiOi0yNy4wLCJUZXJyb3Jpc3Q6V2Fsa2luZzptb2RpZmllcl8yIjoyOC4wLCJUZXJyb3Jpc3Q6V2Fsa2luZzptb2RpZmllcl8zIjotMTkuMCwiVGVycm9yaXN0OldhbGtpbmc6bW9kaWZpZXJfNCI6LTEwLjAsIlRlcnJvcmlzdDpXYWxraW5nOm1vZGlmaWVyXzUiOi0xOS4wLCJUZXJyb3Jpc3Q6V2Fsa2luZzptb2RpZmllcl82Ijo1LjAsIlRlcnJvcmlzdDpXYWxraW5nOm1vZGlmaWVyXzciOjEuMCwiVGVycm9yaXN0OldhbGtpbmc6bW9kaWZpZXJfOCI6LTI2LjAsIlRlcnJvcmlzdDpXYWxraW5nOm1vZGlmaWVyXzkiOjE5LjAsIlRlcnJvcmlzdDpXYWxraW5nOm1vZGlmaWVyX21vZGUiOiJTZXF1ZW50aWFsIiwiVGVycm9yaXN0OldhbGtpbmc6bW9kaWZpZXJfb2Zmc2V0IjowLjAsIlRlcnJvcmlzdDpXYWxraW5nOm1vZGlmaWVyX3N0ZXBzIjoxMC4wLCJUZXJyb3Jpc3Q6V2Fsa2luZzpyaWdodF9saW1pdCI6NjAuMCwiVGVycm9yaXN0OldhbGtpbmc6eWF3X2FkZCI6dHJ1ZSwiVGVycm9yaXN0OldhbGtpbmc6eWF3X2xlZnQiOi0yNy4wLCJUZXJyb3Jpc3Q6V2Fsa2luZzp5YXdfbW9kaWZpZXIiOiI1LVdheSIsIlRlcnJvcmlzdDpXYWxraW5nOnlhd19vZmZzZXQiOjUuMCwiVGVycm9yaXN0OldhbGtpbmc6eWF3X3JpZ2h0Ijo0OS4wLCJhbGxvd19vbl91c2UuZW5hYmxlZCI6dHJ1ZSwiYW50aV9icnV0ZWZvcmNlLmNvbmRpdGlvbnMiOlsiU3RhbmRpbmciLCJSdW5uaW5nIiwiV2Fsa2luZyIsIkNyb3VjaGluZyIsIlNuZWFraW5nIiwiSW4gQWlyIiwiQWlyIENyb3VjaCJdLCJhbnRpX2JydXRlZm9yY2UuZW5hYmxlZCI6dHJ1ZSwiYW50aV9icnV0ZWZvcmNlLm1vZGUiOiJNZXRhIiwiYW50aV9icnV0ZWZvcmNlLnRpbWUiOjMwLjAsImF2b2lkX2JhY2tzdGFiLmVuYWJsZWQiOnRydWUsImRpc2FibGVycy5ub19lbmVtaWVzIjpmYWxzZSwiZGlzYWJsZXJzLm9uX3dhcm11cCI6ZmFsc2UsImZyZWVzdGFuZGluZy5kaXNhYmxlcnMiOlsiQ3JvdWNoaW5nIiwiU25lYWtpbmciXSwiZnJlZXN0YW5kaW5nLmVuYWJsZWQiOmZhbHNlLCJtYW51YWxfeWF3LmRpcmVjdGlvbiI6IkRpc2FibGVkIiwic2FmZV9oZWFkLmNvbmRpdGlvbnMiOltdLCJzYWZlX2hlYWQuZW5hYmxlZCI6ZmFsc2V9LCJJbnRlcmZhY2UiOnsiZGFtYWdlX2luZGljYXRvci5jb2xvciI6IkZGRkZGRkZGIiwiZGFtYWdlX2luZGljYXRvci5lbmFibGVkIjpmYWxzZSwiZGFtYWdlX2luZGljYXRvci5mb250IjoiRGVmYXVsdCIsImRhbWFnZV9pbmRpY2F0b3I6eCI6OTYwLjAsImRhbWFnZV9pbmRpY2F0b3I6eSI6NTQwLjAsIm1hbnVhbF9hcnJvd3MuY29sb3IiOiJDMENBRkZGRiIsIm1hbnVhbF9hcnJvd3MuZW5hYmxlZCI6ZmFsc2UsIm1hbnVhbF9hcnJvd3MuZm9udCI6IkRlZmF1bHQiLCJtYW51YWxfYXJyb3dzLmxlZnQiOiI8IiwibWFudWFsX2Fycm93cy5vZmZzZXQiOjQwLjAsIm1hbnVhbF9hcnJvd3MucmlnaHQiOiI+IiwibWFudWFsX2Fycm93cy5zdHlsZSI6IlRlYW1Ta2VldCIsInNrZWV0X2luZGljYXRvcnMuQk9EWSI6IkJPRFkiLCJza2VldF9pbmRpY2F0b3JzLkRBIjoiREEiLCJza2VldF9pbmRpY2F0b3JzLkRUIjoiRFQiLCJza2VldF9pbmRpY2F0b3JzLkRVQ0siOiJEVUNLIiwic2tlZXRfaW5kaWNhdG9ycy5GUyI6IkZTIiwic2tlZXRfaW5kaWNhdG9ycy5IQyI6IkhDIiwic2tlZXRfaW5kaWNhdG9ycy5NRCI6Ik1EIiwic2tlZXRfaW5kaWNhdG9ycy5PU0FBIjoiT1NBQSIsInNrZWV0X2luZGljYXRvcnMuUElORyI6IlBJTkciLCJza2VldF9pbmRpY2F0b3JzLlNBRkUiOiJTQUZFIiwic2tlZXRfaW5kaWNhdG9ycy5jdXN0b21pemUiOmZhbHNlLCJza2VldF9pbmRpY2F0b3JzLmVuYWJsZWQiOmZhbHNlLCJza2VldF9pbmRpY2F0b3JzLml0ZW1zIjpbIlBJTkciLCJEVCIsIk9TQUEiLCJEVUNLIiwiREEiLCJTQUZFIiwiQk9EWSIsIk1EIiwiSEMiLCJGUyIsIkM0Il0sInZlbG9jaXR5X3dhcm5pbmcuY29sb3IiOiJDMENBRkZGRiIsInZlbG9jaXR5X3dhcm5pbmcuZW5hYmxlZCI6ZmFsc2UsInZlbG9jaXR5X3dhcm5pbmc6eCI6ODc2LjAsInZlbG9jaXR5X3dhcm5pbmc6eSI6MTYwLjAsIndhdGVybWFyay5jb2xfYSI6IkZGRkZGRkZGIiwid2F0ZXJtYXJrLmNvbF9iIjoiRkZGRkZGRkYiLCJ3YXRlcm1hcmsuZWZmZWN0cyI6W10sIndhdGVybWFyay5mb250IjoiRGVmYXVsdCIsIndhdGVybWFyay5yYWluYm93IjpmYWxzZSwid2F0ZXJtYXJrLnRleHQiOiJnYXpvbGluYSIsIndhdGVybWFyazp4Ijo4LjAsIndhdGVybWFyazp5Ijo1NDAuMH0sIk1pc2MiOnsiYXNwZWN0X3JhdGlvLmVuYWJsZWQiOmZhbHNlLCJhc3BlY3RfcmF0aW8ucHJvcG9ydGlvbiI6MC4wLCJsb2dfZXZlbnRzLmNvbG9yX2hpdCI6IkMzQ0FGRkZGIiwibG9nX2V2ZW50cy5jb2xvcl9taXNzIjoiRkY5MjkyRkYiLCJsb2dfZXZlbnRzLmVuYWJsZWQiOmZhbHNlLCJsb2dfZXZlbnRzLm91dHB1dCI6W10sIm5vdGlmeV9vbl9yb3VuZF9zdGFydC5lbmFibGVkIjpmYWxzZSwidW5sb2NrX2Zha2VfbGF0ZW5jeS5lbmFibGVkIjpmYWxzZSwidmlld21vZGVsLmVuYWJsZWQiOmZhbHNlLCJ2aWV3bW9kZWwuZm92Ijo2ODAuMCwidmlld21vZGVsLm9mZnNldF94IjoyNS4wLCJ2aWV3bW9kZWwub2Zmc2V0X3kiOjAuMCwidmlld21vZGVsLm9mZnNldF96IjotMTUuMH0sIk1vdmVtZW50Ijp7ImVkZ2Vfc3RvcC5lbmFibGVkIjpmYWxzZSwiZmFrZV9kdWNrLm9uX2ZyZWV6ZXRpbWUiOmZhbHNlLCJmYWtlX2R1Y2sudW5sb2NrX3NwZWVkIjpmYWxzZSwiZmFzdF9sYWRkZXIuZW5hYmxlZCI6ZmFsc2UsIm5vX2ZhbGxfZGFtYWdlLmVuYWJsZWQiOmZhbHNlLCJzdXBlcl90b3NzLmVuYWJsZWQiOmZhbHNlfSwiVmlzdWFscyI6eyJhbmltYXRpb25zLmVhcnRocXVha2UiOmZhbHNlLCJhbmltYXRpb25zLmVuYWJsZWQiOmZhbHNlLCJhbmltYXRpb25zLmluX2FpciI6IkRpc2FibGVkIiwiYW5pbWF0aW9ucy5tb3ZlX2xlYW4iOjAuMCwiYW5pbWF0aW9ucy5vbl9ncm91bmQiOiJEaXNhYmxlZCIsImFuaW1hdGlvbnMucGl0Y2hfb25fbGFuZCI6ZmFsc2UsImFuaW1hdGlvbnMuc2xpZGluZ19jcm91Y2giOmZhbHNlLCJhbmltYXRpb25zLnNsaWRpbmdfc2xvd3dhbGsiOmZhbHNlLCJoaXRfbWFya2VyLmNvbG9yIjoiMDBGRkZGRkYiLCJoaXRfbWFya2VyLmVuYWJsZWQiOmZhbHNlLCJoaXRfbWFya2VyLnNpemUiOjUuMCwiaGl0X21hcmtlci50aGlja25lc3MiOjIuMCwiaGl0X21hcmtlci50eXBlIjpbXSwia2VlcF9tb2RlbF90cmFuc3BhcmVuY3kuZW5hYmxlZCI6ZmFsc2UsIm5hZGVfcmFkaXVzLmVuYWJsZWQiOmZhbHNlLCJuYWRlX3JhZGl1cy5tb2xvdG92IjpmYWxzZSwibmFkZV9yYWRpdXMubW9sb3Rvdl9jb2xvciI6IkZGM0YzRkZGIiwibmFkZV9yYWRpdXMuc21va2UiOmZhbHNlLCJuYWRlX3JhZGl1cy5zbW9rZV9jb2xvciI6IjNEOTNGQUZGIiwic2NvcGVfb3ZlcmxheS5hZGRpdGlvbnMiOltdLCJzY29wZV9vdmVybGF5LmNvbG9yIjoiRkZGRkZGODAiLCJzY29wZV9vdmVybGF5LmVuYWJsZWQiOmZhbHNlLCJzY29wZV9vdmVybGF5LmV4Y2x1ZGVfbGluZXMiOltdLCJzY29wZV9vdmVybGF5LmdhcCI6NS4wLCJzY29wZV9vdmVybGF5LnNpemUiOjUwLjB9fQ==");
+            v96("GODMODKI 777", "eyJBbnRpLUFpbSI6eyJDb3VudGVyLVRlcnJvcmlzdDpBaXIgQ3JvdWNoOmJvZHlfbW9kZSI6IlJhbmRvbSIsIkNvdW50ZXItVGVycm9yaXN0OkFpciBDcm91Y2g6Ym9keV90aWNrcyI6MTYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6QWlyIENyb3VjaDpib2R5X3lhdyI6dHJ1ZSwiQ291bnRlci1UZXJyb3Jpc3Q6QWlyIENyb3VjaDpjaG9rZV8xIjoxOC4wLCJDb3VudGVyLVRlcnJvcmlzdDpBaXIgQ3JvdWNoOmNob2tlXzEwIjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpBaXIgQ3JvdWNoOmNob2tlXzIiOjEwLjAsIkNvdW50ZXItVGVycm9yaXN0OkFpciBDcm91Y2g6Y2hva2VfMyI6MTYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6QWlyIENyb3VjaDpjaG9rZV80IjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpBaXIgQ3JvdWNoOmNob2tlXzUiOjE2LjAsIkNvdW50ZXItVGVycm9yaXN0OkFpciBDcm91Y2g6Y2hva2VfNiI6MTYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6QWlyIENyb3VjaDpjaG9rZV83IjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpBaXIgQ3JvdWNoOmNob2tlXzgiOjE2LjAsIkNvdW50ZXItVGVycm9yaXN0OkFpciBDcm91Y2g6Y2hva2VfOSI6MTYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6QWlyIENyb3VjaDpjaG9rZV9tb2RlIjoiUmFuZG9taXplIiwiQ291bnRlci1UZXJyb3Jpc3Q6QWlyIENyb3VjaDpjaG9rZV9zdGVwcyI6Mi4wLCJDb3VudGVyLVRlcnJvcmlzdDpBaXIgQ3JvdWNoOmRlbGF5XzEiOjUuMCwiQ291bnRlci1UZXJyb3Jpc3Q6QWlyIENyb3VjaDpkZWxheV8xMCI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpBaXIgQ3JvdWNoOmRlbGF5XzIiOjkuMCwiQ291bnRlci1UZXJyb3Jpc3Q6QWlyIENyb3VjaDpkZWxheV8zIjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkFpciBDcm91Y2g6ZGVsYXlfNCI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpBaXIgQ3JvdWNoOmRlbGF5XzUiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6QWlyIENyb3VjaDpkZWxheV82IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkFpciBDcm91Y2g6ZGVsYXlfNyI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpBaXIgQ3JvdWNoOmRlbGF5XzgiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6QWlyIENyb3VjaDpkZWxheV85IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkFpciBDcm91Y2g6ZGVsYXlfbW9kZSI6IlJhbmRvbWl6ZSIsIkNvdW50ZXItVGVycm9yaXN0OkFpciBDcm91Y2g6ZGVsYXlfc3RlcHMiOjIuMCwiQ291bnRlci1UZXJyb3Jpc3Q6QWlyIENyb3VjaDplbmFibGVkIjp0cnVlLCJDb3VudGVyLVRlcnJvcmlzdDpBaXIgQ3JvdWNoOmZvcmNlX2RlZmVuc2l2ZSI6dHJ1ZSwiQ291bnRlci1UZXJyb3Jpc3Q6QWlyIENyb3VjaDpsZWZ0X2xpbWl0Ijo2MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpBaXIgQ3JvdWNoOmxpbWl0XzEiOjYwLjAsIkNvdW50ZXItVGVycm9yaXN0OkFpciBDcm91Y2g6bGltaXRfMiI6NTAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6QWlyIENyb3VjaDpsaW1pdF9tb2RlIjoiUmFuZG9tIiwiQ291bnRlci1UZXJyb3Jpc3Q6QWlyIENyb3VjaDptb2RpZmllcl8xIjotMTEuMCwiQ291bnRlci1UZXJyb3Jpc3Q6QWlyIENyb3VjaDptb2RpZmllcl8xMCI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpBaXIgQ3JvdWNoOm1vZGlmaWVyXzIiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6QWlyIENyb3VjaDptb2RpZmllcl8zIjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkFpciBDcm91Y2g6bW9kaWZpZXJfNCI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpBaXIgQ3JvdWNoOm1vZGlmaWVyXzUiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6QWlyIENyb3VjaDptb2RpZmllcl82IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkFpciBDcm91Y2g6bW9kaWZpZXJfNyI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpBaXIgQ3JvdWNoOm1vZGlmaWVyXzgiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6QWlyIENyb3VjaDptb2RpZmllcl85IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkFpciBDcm91Y2g6bW9kaWZpZXJfbW9kZSI6IlJhbmRvbWl6ZSIsIkNvdW50ZXItVGVycm9yaXN0OkFpciBDcm91Y2g6bW9kaWZpZXJfb2Zmc2V0IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkFpciBDcm91Y2g6bW9kaWZpZXJfc3RlcHMiOjIuMCwiQ291bnRlci1UZXJyb3Jpc3Q6QWlyIENyb3VjaDpyaWdodF9saW1pdCI6NjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6QWlyIENyb3VjaDp5YXdfYWRkIjp0cnVlLCJDb3VudGVyLVRlcnJvcmlzdDpBaXIgQ3JvdWNoOnlhd19sZWZ0IjotMjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6QWlyIENyb3VjaDp5YXdfbW9kaWZpZXIiOiJSYW5kb20iLCJDb3VudGVyLVRlcnJvcmlzdDpBaXIgQ3JvdWNoOnlhd19vZmZzZXQiOjUuMCwiQ291bnRlci1UZXJyb3Jpc3Q6QWlyIENyb3VjaDp5YXdfcmlnaHQiOjM5LjAsIkNvdW50ZXItVGVycm9yaXN0OkNyb3VjaGluZzpib2R5X21vZGUiOiJEZWZhdWx0IiwiQ291bnRlci1UZXJyb3Jpc3Q6Q3JvdWNoaW5nOmJvZHlfdGlja3MiOjEwLjAsIkNvdW50ZXItVGVycm9yaXN0OkNyb3VjaGluZzpib2R5X3lhdyI6dHJ1ZSwiQ291bnRlci1UZXJyb3Jpc3Q6Q3JvdWNoaW5nOmNob2tlXzEiOjE2LjAsIkNvdW50ZXItVGVycm9yaXN0OkNyb3VjaGluZzpjaG9rZV8xMCI6MTYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6Q3JvdWNoaW5nOmNob2tlXzIiOjE2LjAsIkNvdW50ZXItVGVycm9yaXN0OkNyb3VjaGluZzpjaG9rZV8zIjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpDcm91Y2hpbmc6Y2hva2VfNCI6MTYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6Q3JvdWNoaW5nOmNob2tlXzUiOjE2LjAsIkNvdW50ZXItVGVycm9yaXN0OkNyb3VjaGluZzpjaG9rZV82IjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpDcm91Y2hpbmc6Y2hva2VfNyI6MTYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6Q3JvdWNoaW5nOmNob2tlXzgiOjE2LjAsIkNvdW50ZXItVGVycm9yaXN0OkNyb3VjaGluZzpjaG9rZV85IjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpDcm91Y2hpbmc6Y2hva2VfbW9kZSI6IkRlZmF1bHQiLCJDb3VudGVyLVRlcnJvcmlzdDpDcm91Y2hpbmc6Y2hva2Vfc3RlcHMiOjIuMCwiQ291bnRlci1UZXJyb3Jpc3Q6Q3JvdWNoaW5nOmRlbGF5XzEiOjMuMCwiQ291bnRlci1UZXJyb3Jpc3Q6Q3JvdWNoaW5nOmRlbGF5XzEwIjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkNyb3VjaGluZzpkZWxheV8yIjo5LjAsIkNvdW50ZXItVGVycm9yaXN0OkNyb3VjaGluZzpkZWxheV8zIjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkNyb3VjaGluZzpkZWxheV80IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkNyb3VjaGluZzpkZWxheV81IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkNyb3VjaGluZzpkZWxheV82IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkNyb3VjaGluZzpkZWxheV83IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkNyb3VjaGluZzpkZWxheV84IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkNyb3VjaGluZzpkZWxheV85IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkNyb3VjaGluZzpkZWxheV9tb2RlIjoiUmFuZG9taXplIiwiQ291bnRlci1UZXJyb3Jpc3Q6Q3JvdWNoaW5nOmRlbGF5X3N0ZXBzIjoyLjAsIkNvdW50ZXItVGVycm9yaXN0OkNyb3VjaGluZzplbmFibGVkIjp0cnVlLCJDb3VudGVyLVRlcnJvcmlzdDpDcm91Y2hpbmc6Zm9yY2VfZGVmZW5zaXZlIjpmYWxzZSwiQ291bnRlci1UZXJyb3Jpc3Q6Q3JvdWNoaW5nOmxlZnRfbGltaXQiOjYwLjAsIkNvdW50ZXItVGVycm9yaXN0OkNyb3VjaGluZzpsaW1pdF8xIjo2MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpDcm91Y2hpbmc6bGltaXRfMiI6NDkuMCwiQ291bnRlci1UZXJyb3Jpc3Q6Q3JvdWNoaW5nOmxpbWl0X21vZGUiOiJSYW5kb20iLCJDb3VudGVyLVRlcnJvcmlzdDpDcm91Y2hpbmc6bW9kaWZpZXJfMSI6LTMuMCwiQ291bnRlci1UZXJyb3Jpc3Q6Q3JvdWNoaW5nOm1vZGlmaWVyXzEwIjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkNyb3VjaGluZzptb2RpZmllcl8yIjoxLjAsIkNvdW50ZXItVGVycm9yaXN0OkNyb3VjaGluZzptb2RpZmllcl8zIjoyMS4wLCJDb3VudGVyLVRlcnJvcmlzdDpDcm91Y2hpbmc6bW9kaWZpZXJfNCI6LTIzLjAsIkNvdW50ZXItVGVycm9yaXN0OkNyb3VjaGluZzptb2RpZmllcl81IjotMjYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6Q3JvdWNoaW5nOm1vZGlmaWVyXzYiOi0xMy4wLCJDb3VudGVyLVRlcnJvcmlzdDpDcm91Y2hpbmc6bW9kaWZpZXJfNyI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpDcm91Y2hpbmc6bW9kaWZpZXJfOCI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpDcm91Y2hpbmc6bW9kaWZpZXJfOSI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpDcm91Y2hpbmc6bW9kaWZpZXJfbW9kZSI6IlNlcXVlbnRpYWwiLCJDb3VudGVyLVRlcnJvcmlzdDpDcm91Y2hpbmc6bW9kaWZpZXJfb2Zmc2V0IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkNyb3VjaGluZzptb2RpZmllcl9zdGVwcyI6Ni4wLCJDb3VudGVyLVRlcnJvcmlzdDpDcm91Y2hpbmc6cmlnaHRfbGltaXQiOjUyLjAsIkNvdW50ZXItVGVycm9yaXN0OkNyb3VjaGluZzp5YXdfYWRkIjp0cnVlLCJDb3VudGVyLVRlcnJvcmlzdDpDcm91Y2hpbmc6eWF3X2xlZnQiOi0yNy4wLCJDb3VudGVyLVRlcnJvcmlzdDpDcm91Y2hpbmc6eWF3X21vZGlmaWVyIjoiU3BpbiIsIkNvdW50ZXItVGVycm9yaXN0OkNyb3VjaGluZzp5YXdfb2Zmc2V0IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkNyb3VjaGluZzp5YXdfcmlnaHQiOjQ1LjAsIkNvdW50ZXItVGVycm9yaXN0OkZyZWVzdGFuZGluZzpib2R5X21vZGUiOiJEZWZhdWx0IiwiQ291bnRlci1UZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmJvZHlfdGlja3MiOjQuMCwiQ291bnRlci1UZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmJvZHlfeWF3Ijp0cnVlLCJDb3VudGVyLVRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6Y2hva2VfMSI6MTYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmNob2tlXzEwIjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6Y2hva2VfMiI6MTYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmNob2tlXzMiOjE2LjAsIkNvdW50ZXItVGVycm9yaXN0OkZyZWVzdGFuZGluZzpjaG9rZV80IjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6Y2hva2VfNSI6MTYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmNob2tlXzYiOjE2LjAsIkNvdW50ZXItVGVycm9yaXN0OkZyZWVzdGFuZGluZzpjaG9rZV83IjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6Y2hva2VfOCI6MTYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmNob2tlXzkiOjE2LjAsIkNvdW50ZXItVGVycm9yaXN0OkZyZWVzdGFuZGluZzpjaG9rZV9tb2RlIjoiRGVmYXVsdCIsIkNvdW50ZXItVGVycm9yaXN0OkZyZWVzdGFuZGluZzpjaG9rZV9zdGVwcyI6Mi4wLCJDb3VudGVyLVRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6ZGVsYXlfMSI6Ni4wLCJDb3VudGVyLVRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6ZGVsYXlfMTAiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmRlbGF5XzIiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmRlbGF5XzMiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmRlbGF5XzQiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmRlbGF5XzUiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmRlbGF5XzYiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmRlbGF5XzciOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmRlbGF5XzgiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmRlbGF5XzkiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmRlbGF5X21vZGUiOiJEZWZhdWx0IiwiQ291bnRlci1UZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmRlbGF5X3N0ZXBzIjoyLjAsIkNvdW50ZXItVGVycm9yaXN0OkZyZWVzdGFuZGluZzplbmFibGVkIjp0cnVlLCJDb3VudGVyLVRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6Zm9yY2VfZGVmZW5zaXZlIjpmYWxzZSwiQ291bnRlci1UZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmxlZnRfbGltaXQiOjYwLjAsIkNvdW50ZXItVGVycm9yaXN0OkZyZWVzdGFuZGluZzpsaW1pdF8xIjo2MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6bGltaXRfMiI6NjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmxpbWl0X21vZGUiOiJEZWZhdWx0IiwiQ291bnRlci1UZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOm1vZGlmaWVyXzEiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOm1vZGlmaWVyXzEwIjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkZyZWVzdGFuZGluZzptb2RpZmllcl8yIjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkZyZWVzdGFuZGluZzptb2RpZmllcl8zIjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkZyZWVzdGFuZGluZzptb2RpZmllcl80IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkZyZWVzdGFuZGluZzptb2RpZmllcl81IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkZyZWVzdGFuZGluZzptb2RpZmllcl82IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkZyZWVzdGFuZGluZzptb2RpZmllcl83IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkZyZWVzdGFuZGluZzptb2RpZmllcl84IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkZyZWVzdGFuZGluZzptb2RpZmllcl85IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkZyZWVzdGFuZGluZzptb2RpZmllcl9tb2RlIjoiRGVmYXVsdCIsIkNvdW50ZXItVGVycm9yaXN0OkZyZWVzdGFuZGluZzptb2RpZmllcl9vZmZzZXQiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOm1vZGlmaWVyX3N0ZXBzIjoyLjAsIkNvdW50ZXItVGVycm9yaXN0OkZyZWVzdGFuZGluZzpyaWdodF9saW1pdCI6NjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOnlhd19hZGQiOnRydWUsIkNvdW50ZXItVGVycm9yaXN0OkZyZWVzdGFuZGluZzp5YXdfbGVmdCI6LTE2LjAsIkNvdW50ZXItVGVycm9yaXN0OkZyZWVzdGFuZGluZzp5YXdfbW9kaWZpZXIiOiJEaXNhYmxlZCIsIkNvdW50ZXItVGVycm9yaXN0OkZyZWVzdGFuZGluZzp5YXdfb2Zmc2V0IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OkZyZWVzdGFuZGluZzp5YXdfcmlnaHQiOjM2LjAsIkNvdW50ZXItVGVycm9yaXN0OkluIEFpcjpib2R5X21vZGUiOiJEZWZhdWx0IiwiQ291bnRlci1UZXJyb3Jpc3Q6SW4gQWlyOmJvZHlfdGlja3MiOjQuMCwiQ291bnRlci1UZXJyb3Jpc3Q6SW4gQWlyOmJvZHlfeWF3Ijp0cnVlLCJDb3VudGVyLVRlcnJvcmlzdDpJbiBBaXI6Y2hva2VfMSI6MTYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6SW4gQWlyOmNob2tlXzEwIjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpJbiBBaXI6Y2hva2VfMiI6MTYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6SW4gQWlyOmNob2tlXzMiOjE2LjAsIkNvdW50ZXItVGVycm9yaXN0OkluIEFpcjpjaG9rZV80IjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpJbiBBaXI6Y2hva2VfNSI6MTYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6SW4gQWlyOmNob2tlXzYiOjE2LjAsIkNvdW50ZXItVGVycm9yaXN0OkluIEFpcjpjaG9rZV83IjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpJbiBBaXI6Y2hva2VfOCI6MTYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6SW4gQWlyOmNob2tlXzkiOjE2LjAsIkNvdW50ZXItVGVycm9yaXN0OkluIEFpcjpjaG9rZV9tb2RlIjoiRGVmYXVsdCIsIkNvdW50ZXItVGVycm9yaXN0OkluIEFpcjpjaG9rZV9zdGVwcyI6Mi4wLCJDb3VudGVyLVRlcnJvcmlzdDpJbiBBaXI6ZGVsYXlfMSI6My4wLCJDb3VudGVyLVRlcnJvcmlzdDpJbiBBaXI6ZGVsYXlfMTAiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6SW4gQWlyOmRlbGF5XzIiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6SW4gQWlyOmRlbGF5XzMiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6SW4gQWlyOmRlbGF5XzQiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6SW4gQWlyOmRlbGF5XzUiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6SW4gQWlyOmRlbGF5XzYiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6SW4gQWlyOmRlbGF5XzciOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6SW4gQWlyOmRlbGF5XzgiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6SW4gQWlyOmRlbGF5XzkiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6SW4gQWlyOmRlbGF5X21vZGUiOiJEZWZhdWx0IiwiQ291bnRlci1UZXJyb3Jpc3Q6SW4gQWlyOmRlbGF5X3N0ZXBzIjoyLjAsIkNvdW50ZXItVGVycm9yaXN0OkluIEFpcjplbmFibGVkIjp0cnVlLCJDb3VudGVyLVRlcnJvcmlzdDpJbiBBaXI6Zm9yY2VfZGVmZW5zaXZlIjpmYWxzZSwiQ291bnRlci1UZXJyb3Jpc3Q6SW4gQWlyOmxlZnRfbGltaXQiOjYwLjAsIkNvdW50ZXItVGVycm9yaXN0OkluIEFpcjpsaW1pdF8xIjo2MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpJbiBBaXI6bGltaXRfMiI6NTEuMCwiQ291bnRlci1UZXJyb3Jpc3Q6SW4gQWlyOmxpbWl0X21vZGUiOiJTd2l0Y2giLCJDb3VudGVyLVRlcnJvcmlzdDpJbiBBaXI6bW9kaWZpZXJfMSI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpJbiBBaXI6bW9kaWZpZXJfMTAiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6SW4gQWlyOm1vZGlmaWVyXzIiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6SW4gQWlyOm1vZGlmaWVyXzMiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6SW4gQWlyOm1vZGlmaWVyXzQiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6SW4gQWlyOm1vZGlmaWVyXzUiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6SW4gQWlyOm1vZGlmaWVyXzYiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6SW4gQWlyOm1vZGlmaWVyXzciOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6SW4gQWlyOm1vZGlmaWVyXzgiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6SW4gQWlyOm1vZGlmaWVyXzkiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6SW4gQWlyOm1vZGlmaWVyX21vZGUiOiJEZWZhdWx0IiwiQ291bnRlci1UZXJyb3Jpc3Q6SW4gQWlyOm1vZGlmaWVyX29mZnNldCI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpJbiBBaXI6bW9kaWZpZXJfc3RlcHMiOjIuMCwiQ291bnRlci1UZXJyb3Jpc3Q6SW4gQWlyOnJpZ2h0X2xpbWl0Ijo2MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpJbiBBaXI6eWF3X2FkZCI6dHJ1ZSwiQ291bnRlci1UZXJyb3Jpc3Q6SW4gQWlyOnlhd19sZWZ0IjotMjIuMCwiQ291bnRlci1UZXJyb3Jpc3Q6SW4gQWlyOnlhd19tb2RpZmllciI6IkRpc2FibGVkIiwiQ291bnRlci1UZXJyb3Jpc3Q6SW4gQWlyOnlhd19vZmZzZXQiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6SW4gQWlyOnlhd19yaWdodCI6MzguMCwiQ291bnRlci1UZXJyb3Jpc3Q6TWFudWFsIFlhdzpib2R5X21vZGUiOiJEZWZhdWx0IiwiQ291bnRlci1UZXJyb3Jpc3Q6TWFudWFsIFlhdzpib2R5X3RpY2tzIjo0LjAsIkNvdW50ZXItVGVycm9yaXN0Ok1hbnVhbCBZYXc6Ym9keV95YXciOnRydWUsIkNvdW50ZXItVGVycm9yaXN0Ok1hbnVhbCBZYXc6Y2hva2VfMSI6MTYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6TWFudWFsIFlhdzpjaG9rZV8xMCI6MTYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6TWFudWFsIFlhdzpjaG9rZV8yIjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpNYW51YWwgWWF3OmNob2tlXzMiOjE2LjAsIkNvdW50ZXItVGVycm9yaXN0Ok1hbnVhbCBZYXc6Y2hva2VfNCI6MTYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6TWFudWFsIFlhdzpjaG9rZV81IjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpNYW51YWwgWWF3OmNob2tlXzYiOjE2LjAsIkNvdW50ZXItVGVycm9yaXN0Ok1hbnVhbCBZYXc6Y2hva2VfNyI6MTYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6TWFudWFsIFlhdzpjaG9rZV84IjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpNYW51YWwgWWF3OmNob2tlXzkiOjE2LjAsIkNvdW50ZXItVGVycm9yaXN0Ok1hbnVhbCBZYXc6Y2hva2VfbW9kZSI6IkRlZmF1bHQiLCJDb3VudGVyLVRlcnJvcmlzdDpNYW51YWwgWWF3OmNob2tlX3N0ZXBzIjoyLjAsIkNvdW50ZXItVGVycm9yaXN0Ok1hbnVhbCBZYXc6ZGVsYXlfMSI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpNYW51YWwgWWF3OmRlbGF5XzEwIjowLjAsIkNvdW50ZXItVGVycm9yaXN0Ok1hbnVhbCBZYXc6ZGVsYXlfMiI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpNYW51YWwgWWF3OmRlbGF5XzMiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6TWFudWFsIFlhdzpkZWxheV80IjowLjAsIkNvdW50ZXItVGVycm9yaXN0Ok1hbnVhbCBZYXc6ZGVsYXlfNSI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpNYW51YWwgWWF3OmRlbGF5XzYiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6TWFudWFsIFlhdzpkZWxheV83IjowLjAsIkNvdW50ZXItVGVycm9yaXN0Ok1hbnVhbCBZYXc6ZGVsYXlfOCI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpNYW51YWwgWWF3OmRlbGF5XzkiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6TWFudWFsIFlhdzpkZWxheV9tb2RlIjoiRGVmYXVsdCIsIkNvdW50ZXItVGVycm9yaXN0Ok1hbnVhbCBZYXc6ZGVsYXlfc3RlcHMiOjIuMCwiQ291bnRlci1UZXJyb3Jpc3Q6TWFudWFsIFlhdzplbmFibGVkIjp0cnVlLCJDb3VudGVyLVRlcnJvcmlzdDpNYW51YWwgWWF3OmZvcmNlX2RlZmVuc2l2ZSI6ZmFsc2UsIkNvdW50ZXItVGVycm9yaXN0Ok1hbnVhbCBZYXc6bGVmdF9saW1pdCI6NjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6TWFudWFsIFlhdzpsaW1pdF8xIjo2MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpNYW51YWwgWWF3OmxpbWl0XzIiOjYwLjAsIkNvdW50ZXItVGVycm9yaXN0Ok1hbnVhbCBZYXc6bGltaXRfbW9kZSI6IkRlZmF1bHQiLCJDb3VudGVyLVRlcnJvcmlzdDpNYW51YWwgWWF3Om1vZGlmaWVyXzEiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6TWFudWFsIFlhdzptb2RpZmllcl8xMCI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpNYW51YWwgWWF3Om1vZGlmaWVyXzIiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6TWFudWFsIFlhdzptb2RpZmllcl8zIjowLjAsIkNvdW50ZXItVGVycm9yaXN0Ok1hbnVhbCBZYXc6bW9kaWZpZXJfNCI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpNYW51YWwgWWF3Om1vZGlmaWVyXzUiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6TWFudWFsIFlhdzptb2RpZmllcl82IjowLjAsIkNvdW50ZXItVGVycm9yaXN0Ok1hbnVhbCBZYXc6bW9kaWZpZXJfNyI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpNYW51YWwgWWF3Om1vZGlmaWVyXzgiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6TWFudWFsIFlhdzptb2RpZmllcl85IjowLjAsIkNvdW50ZXItVGVycm9yaXN0Ok1hbnVhbCBZYXc6bW9kaWZpZXJfbW9kZSI6IkRlZmF1bHQiLCJDb3VudGVyLVRlcnJvcmlzdDpNYW51YWwgWWF3Om1vZGlmaWVyX29mZnNldCI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpNYW51YWwgWWF3Om1vZGlmaWVyX3N0ZXBzIjoyLjAsIkNvdW50ZXItVGVycm9yaXN0Ok1hbnVhbCBZYXc6cmlnaHRfbGltaXQiOjYwLjAsIkNvdW50ZXItVGVycm9yaXN0Ok1hbnVhbCBZYXc6eWF3X2FkZCI6ZmFsc2UsIkNvdW50ZXItVGVycm9yaXN0Ok1hbnVhbCBZYXc6eWF3X2xlZnQiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6TWFudWFsIFlhdzp5YXdfbW9kaWZpZXIiOiJEaXNhYmxlZCIsIkNvdW50ZXItVGVycm9yaXN0Ok1hbnVhbCBZYXc6eWF3X29mZnNldCI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpNYW51YWwgWWF3Onlhd19yaWdodCI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpSdW5uaW5nOmJvZHlfbW9kZSI6IlJhbmRvbSIsIkNvdW50ZXItVGVycm9yaXN0OlJ1bm5pbmc6Ym9keV90aWNrcyI6MTIuMCwiQ291bnRlci1UZXJyb3Jpc3Q6UnVubmluZzpib2R5X3lhdyI6dHJ1ZSwiQ291bnRlci1UZXJyb3Jpc3Q6UnVubmluZzpjaG9rZV8xIjoxLjAsIkNvdW50ZXItVGVycm9yaXN0OlJ1bm5pbmc6Y2hva2VfMTAiOjE2LjAsIkNvdW50ZXItVGVycm9yaXN0OlJ1bm5pbmc6Y2hva2VfMiI6MjIuMCwiQ291bnRlci1UZXJyb3Jpc3Q6UnVubmluZzpjaG9rZV8zIjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpSdW5uaW5nOmNob2tlXzQiOjE2LjAsIkNvdW50ZXItVGVycm9yaXN0OlJ1bm5pbmc6Y2hva2VfNSI6MTYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6UnVubmluZzpjaG9rZV82IjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpSdW5uaW5nOmNob2tlXzciOjE2LjAsIkNvdW50ZXItVGVycm9yaXN0OlJ1bm5pbmc6Y2hva2VfOCI6MTYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6UnVubmluZzpjaG9rZV85IjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpSdW5uaW5nOmNob2tlX21vZGUiOiJEZWZhdWx0IiwiQ291bnRlci1UZXJyb3Jpc3Q6UnVubmluZzpjaG9rZV9zdGVwcyI6Mi4wLCJDb3VudGVyLVRlcnJvcmlzdDpSdW5uaW5nOmRlbGF5XzEiOjQuMCwiQ291bnRlci1UZXJyb3Jpc3Q6UnVubmluZzpkZWxheV8xMCI6NS4wLCJDb3VudGVyLVRlcnJvcmlzdDpSdW5uaW5nOmRlbGF5XzIiOjEuMCwiQ291bnRlci1UZXJyb3Jpc3Q6UnVubmluZzpkZWxheV8zIjo1LjAsIkNvdW50ZXItVGVycm9yaXN0OlJ1bm5pbmc6ZGVsYXlfNCI6MS4wLCJDb3VudGVyLVRlcnJvcmlzdDpSdW5uaW5nOmRlbGF5XzUiOjYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6UnVubmluZzpkZWxheV82IjoxLjAsIkNvdW50ZXItVGVycm9yaXN0OlJ1bm5pbmc6ZGVsYXlfNyI6MS4wLCJDb3VudGVyLVRlcnJvcmlzdDpSdW5uaW5nOmRlbGF5XzgiOjMuMCwiQ291bnRlci1UZXJyb3Jpc3Q6UnVubmluZzpkZWxheV85IjoyLjAsIkNvdW50ZXItVGVycm9yaXN0OlJ1bm5pbmc6ZGVsYXlfbW9kZSI6IlNlcXVlbnRpYWwiLCJDb3VudGVyLVRlcnJvcmlzdDpSdW5uaW5nOmRlbGF5X3N0ZXBzIjoxLjAsIkNvdW50ZXItVGVycm9yaXN0OlJ1bm5pbmc6ZW5hYmxlZCI6dHJ1ZSwiQ291bnRlci1UZXJyb3Jpc3Q6UnVubmluZzpmb3JjZV9kZWZlbnNpdmUiOmZhbHNlLCJDb3VudGVyLVRlcnJvcmlzdDpSdW5uaW5nOmxlZnRfbGltaXQiOjYwLjAsIkNvdW50ZXItVGVycm9yaXN0OlJ1bm5pbmc6bGltaXRfMSI6NjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6UnVubmluZzpsaW1pdF8yIjo0OC4wLCJDb3VudGVyLVRlcnJvcmlzdDpSdW5uaW5nOmxpbWl0X21vZGUiOiJTd2l0Y2giLCJDb3VudGVyLVRlcnJvcmlzdDpSdW5uaW5nOm1vZGlmaWVyXzEiOi01LjAsIkNvdW50ZXItVGVycm9yaXN0OlJ1bm5pbmc6bW9kaWZpZXJfMTAiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6UnVubmluZzptb2RpZmllcl8yIjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpSdW5uaW5nOm1vZGlmaWVyXzMiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6UnVubmluZzptb2RpZmllcl80IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OlJ1bm5pbmc6bW9kaWZpZXJfNSI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpSdW5uaW5nOm1vZGlmaWVyXzYiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6UnVubmluZzptb2RpZmllcl83IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OlJ1bm5pbmc6bW9kaWZpZXJfOCI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpSdW5uaW5nOm1vZGlmaWVyXzkiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6UnVubmluZzptb2RpZmllcl9tb2RlIjoiU2VxdWVudGlhbCIsIkNvdW50ZXItVGVycm9yaXN0OlJ1bm5pbmc6bW9kaWZpZXJfb2Zmc2V0IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OlJ1bm5pbmc6bW9kaWZpZXJfc3RlcHMiOjIuMCwiQ291bnRlci1UZXJyb3Jpc3Q6UnVubmluZzpyaWdodF9saW1pdCI6NjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6UnVubmluZzp5YXdfYWRkIjp0cnVlLCJDb3VudGVyLVRlcnJvcmlzdDpSdW5uaW5nOnlhd19sZWZ0IjotMTYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6UnVubmluZzp5YXdfbW9kaWZpZXIiOiJEaXNhYmxlZCIsIkNvdW50ZXItVGVycm9yaXN0OlJ1bm5pbmc6eWF3X29mZnNldCI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpSdW5uaW5nOnlhd19yaWdodCI6MzYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6Ym9keV9tb2RlIjoiUmFuZG9tIiwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6Ym9keV90aWNrcyI6MTIuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6Ym9keV95YXciOnRydWUsIkNvdW50ZXItVGVycm9yaXN0OlNuZWFraW5nOmNob2tlXzEiOjE2LjAsIkNvdW50ZXItVGVycm9yaXN0OlNuZWFraW5nOmNob2tlXzEwIjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpTbmVha2luZzpjaG9rZV8yIjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpTbmVha2luZzpjaG9rZV8zIjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpTbmVha2luZzpjaG9rZV80IjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpTbmVha2luZzpjaG9rZV81IjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpTbmVha2luZzpjaG9rZV82IjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpTbmVha2luZzpjaG9rZV83IjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpTbmVha2luZzpjaG9rZV84IjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpTbmVha2luZzpjaG9rZV85IjoxNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpTbmVha2luZzpjaG9rZV9tb2RlIjoiRGVmYXVsdCIsIkNvdW50ZXItVGVycm9yaXN0OlNuZWFraW5nOmNob2tlX3N0ZXBzIjoyLjAsIkNvdW50ZXItVGVycm9yaXN0OlNuZWFraW5nOmRlbGF5XzEiOjQuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6ZGVsYXlfMTAiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6ZGVsYXlfMiI6OC4wLCJDb3VudGVyLVRlcnJvcmlzdDpTbmVha2luZzpkZWxheV8zIjowLjAsIkNvdW50ZXItVGVycm9yaXN0OlNuZWFraW5nOmRlbGF5XzQiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6ZGVsYXlfNSI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpTbmVha2luZzpkZWxheV82IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OlNuZWFraW5nOmRlbGF5XzciOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6ZGVsYXlfOCI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpTbmVha2luZzpkZWxheV85IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OlNuZWFraW5nOmRlbGF5X21vZGUiOiJTZXF1ZW50aWFsIiwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6ZGVsYXlfc3RlcHMiOjIuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6ZW5hYmxlZCI6dHJ1ZSwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6Zm9yY2VfZGVmZW5zaXZlIjpmYWxzZSwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6bGVmdF9saW1pdCI6NjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6bGltaXRfMSI6NjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6bGltaXRfMiI6NTEuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6bGltaXRfbW9kZSI6IlN3aXRjaCIsIkNvdW50ZXItVGVycm9yaXN0OlNuZWFraW5nOm1vZGlmaWVyXzEiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6bW9kaWZpZXJfMTAiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6bW9kaWZpZXJfMiI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpTbmVha2luZzptb2RpZmllcl8zIjowLjAsIkNvdW50ZXItVGVycm9yaXN0OlNuZWFraW5nOm1vZGlmaWVyXzQiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6bW9kaWZpZXJfNSI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpTbmVha2luZzptb2RpZmllcl82IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OlNuZWFraW5nOm1vZGlmaWVyXzciOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6bW9kaWZpZXJfOCI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpTbmVha2luZzptb2RpZmllcl85IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OlNuZWFraW5nOm1vZGlmaWVyX21vZGUiOiJEZWZhdWx0IiwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6bW9kaWZpZXJfb2Zmc2V0IjotNS4wLCJDb3VudGVyLVRlcnJvcmlzdDpTbmVha2luZzptb2RpZmllcl9zdGVwcyI6Mi4wLCJDb3VudGVyLVRlcnJvcmlzdDpTbmVha2luZzpyaWdodF9saW1pdCI6NjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6eWF3X2FkZCI6dHJ1ZSwiQ291bnRlci1UZXJyb3Jpc3Q6U25lYWtpbmc6eWF3X2xlZnQiOi0yNy4wLCJDb3VudGVyLVRlcnJvcmlzdDpTbmVha2luZzp5YXdfbW9kaWZpZXIiOiJSYW5kb20iLCJDb3VudGVyLVRlcnJvcmlzdDpTbmVha2luZzp5YXdfb2Zmc2V0Ijo1LjAsIkNvdW50ZXItVGVycm9yaXN0OlNuZWFraW5nOnlhd19yaWdodCI6NDQuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U3RhbmRpbmc6Ym9keV9tb2RlIjoiUmFuZG9tIiwiQ291bnRlci1UZXJyb3Jpc3Q6U3RhbmRpbmc6Ym9keV90aWNrcyI6MTIuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U3RhbmRpbmc6Ym9keV95YXciOnRydWUsIkNvdW50ZXItVGVycm9yaXN0OlN0YW5kaW5nOmNob2tlXzEiOjMuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U3RhbmRpbmc6Y2hva2VfMTAiOjEuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U3RhbmRpbmc6Y2hva2VfMiI6MTkuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U3RhbmRpbmc6Y2hva2VfMyI6MTUuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U3RhbmRpbmc6Y2hva2VfNCI6Ni4wLCJDb3VudGVyLVRlcnJvcmlzdDpTdGFuZGluZzpjaG9rZV81IjoxMy4wLCJDb3VudGVyLVRlcnJvcmlzdDpTdGFuZGluZzpjaG9rZV82IjoyLjAsIkNvdW50ZXItVGVycm9yaXN0OlN0YW5kaW5nOmNob2tlXzciOjE4LjAsIkNvdW50ZXItVGVycm9yaXN0OlN0YW5kaW5nOmNob2tlXzgiOjIyLjAsIkNvdW50ZXItVGVycm9yaXN0OlN0YW5kaW5nOmNob2tlXzkiOjguMCwiQ291bnRlci1UZXJyb3Jpc3Q6U3RhbmRpbmc6Y2hva2VfbW9kZSI6IlNlcXVlbnRpYWwiLCJDb3VudGVyLVRlcnJvcmlzdDpTdGFuZGluZzpjaG9rZV9zdGVwcyI6MTAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U3RhbmRpbmc6ZGVsYXlfMSI6Ny4wLCJDb3VudGVyLVRlcnJvcmlzdDpTdGFuZGluZzpkZWxheV8xMCI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpTdGFuZGluZzpkZWxheV8yIjo1LjAsIkNvdW50ZXItVGVycm9yaXN0OlN0YW5kaW5nOmRlbGF5XzMiOjIuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U3RhbmRpbmc6ZGVsYXlfNCI6Ni4wLCJDb3VudGVyLVRlcnJvcmlzdDpTdGFuZGluZzpkZWxheV81Ijo3LjAsIkNvdW50ZXItVGVycm9yaXN0OlN0YW5kaW5nOmRlbGF5XzYiOjYuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U3RhbmRpbmc6ZGVsYXlfNyI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpTdGFuZGluZzpkZWxheV84IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OlN0YW5kaW5nOmRlbGF5XzkiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U3RhbmRpbmc6ZGVsYXlfbW9kZSI6IlNlcXVlbnRpYWwiLCJDb3VudGVyLVRlcnJvcmlzdDpTdGFuZGluZzpkZWxheV9zdGVwcyI6Ni4wLCJDb3VudGVyLVRlcnJvcmlzdDpTdGFuZGluZzplbmFibGVkIjp0cnVlLCJDb3VudGVyLVRlcnJvcmlzdDpTdGFuZGluZzpmb3JjZV9kZWZlbnNpdmUiOnRydWUsIkNvdW50ZXItVGVycm9yaXN0OlN0YW5kaW5nOmxlZnRfbGltaXQiOjYwLjAsIkNvdW50ZXItVGVycm9yaXN0OlN0YW5kaW5nOmxpbWl0XzEiOjYwLjAsIkNvdW50ZXItVGVycm9yaXN0OlN0YW5kaW5nOmxpbWl0XzIiOjUwLjAsIkNvdW50ZXItVGVycm9yaXN0OlN0YW5kaW5nOmxpbWl0X21vZGUiOiJSYW5kb20iLCJDb3VudGVyLVRlcnJvcmlzdDpTdGFuZGluZzptb2RpZmllcl8xIjoyMC4wLCJDb3VudGVyLVRlcnJvcmlzdDpTdGFuZGluZzptb2RpZmllcl8xMCI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpTdGFuZGluZzptb2RpZmllcl8yIjoxNy4wLCJDb3VudGVyLVRlcnJvcmlzdDpTdGFuZGluZzptb2RpZmllcl8zIjoyNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpTdGFuZGluZzptb2RpZmllcl80IjotMTQuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U3RhbmRpbmc6bW9kaWZpZXJfNSI6Ny4wLCJDb3VudGVyLVRlcnJvcmlzdDpTdGFuZGluZzptb2RpZmllcl82IjotNi4wLCJDb3VudGVyLVRlcnJvcmlzdDpTdGFuZGluZzptb2RpZmllcl83IjowLjAsIkNvdW50ZXItVGVycm9yaXN0OlN0YW5kaW5nOm1vZGlmaWVyXzgiOjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U3RhbmRpbmc6bW9kaWZpZXJfOSI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpTdGFuZGluZzptb2RpZmllcl9tb2RlIjoiU2VxdWVudGlhbCIsIkNvdW50ZXItVGVycm9yaXN0OlN0YW5kaW5nOm1vZGlmaWVyX29mZnNldCI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpTdGFuZGluZzptb2RpZmllcl9zdGVwcyI6Ni4wLCJDb3VudGVyLVRlcnJvcmlzdDpTdGFuZGluZzpyaWdodF9saW1pdCI6NjAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U3RhbmRpbmc6eWF3X2FkZCI6dHJ1ZSwiQ291bnRlci1UZXJyb3Jpc3Q6U3RhbmRpbmc6eWF3X2xlZnQiOi0yMC4wLCJDb3VudGVyLVRlcnJvcmlzdDpTdGFuZGluZzp5YXdfbW9kaWZpZXIiOiI1LVdheSIsIkNvdW50ZXItVGVycm9yaXN0OlN0YW5kaW5nOnlhd19vZmZzZXQiOjUuMCwiQ291bnRlci1UZXJyb3Jpc3Q6U3RhbmRpbmc6eWF3X3JpZ2h0IjozOC4wLCJDb3VudGVyLVRlcnJvcmlzdDpXYWxraW5nOmJvZHlfbW9kZSI6IlJhbmRvbSIsIkNvdW50ZXItVGVycm9yaXN0OldhbGtpbmc6Ym9keV90aWNrcyI6MTEuMCwiQ291bnRlci1UZXJyb3Jpc3Q6V2Fsa2luZzpib2R5X3lhdyI6dHJ1ZSwiQ291bnRlci1UZXJyb3Jpc3Q6V2Fsa2luZzpjaG9rZV8xIjoxMi4wLCJDb3VudGVyLVRlcnJvcmlzdDpXYWxraW5nOmNob2tlXzEwIjoyMi4wLCJDb3VudGVyLVRlcnJvcmlzdDpXYWxraW5nOmNob2tlXzIiOjIyLjAsIkNvdW50ZXItVGVycm9yaXN0OldhbGtpbmc6Y2hva2VfMyI6Ni4wLCJDb3VudGVyLVRlcnJvcmlzdDpXYWxraW5nOmNob2tlXzQiOjEyLjAsIkNvdW50ZXItVGVycm9yaXN0OldhbGtpbmc6Y2hva2VfNSI6MTQuMCwiQ291bnRlci1UZXJyb3Jpc3Q6V2Fsa2luZzpjaG9rZV82IjoyMi4wLCJDb3VudGVyLVRlcnJvcmlzdDpXYWxraW5nOmNob2tlXzciOjUuMCwiQ291bnRlci1UZXJyb3Jpc3Q6V2Fsa2luZzpjaG9rZV84IjoyMi4wLCJDb3VudGVyLVRlcnJvcmlzdDpXYWxraW5nOmNob2tlXzkiOjEyLjAsIkNvdW50ZXItVGVycm9yaXN0OldhbGtpbmc6Y2hva2VfbW9kZSI6IlNlcXVlbnRpYWwiLCJDb3VudGVyLVRlcnJvcmlzdDpXYWxraW5nOmNob2tlX3N0ZXBzIjoxMC4wLCJDb3VudGVyLVRlcnJvcmlzdDpXYWxraW5nOmRlbGF5XzEiOjIuMCwiQ291bnRlci1UZXJyb3Jpc3Q6V2Fsa2luZzpkZWxheV8xMCI6NS4wLCJDb3VudGVyLVRlcnJvcmlzdDpXYWxraW5nOmRlbGF5XzIiOjQuMCwiQ291bnRlci1UZXJyb3Jpc3Q6V2Fsa2luZzpkZWxheV8zIjowLjAsIkNvdW50ZXItVGVycm9yaXN0OldhbGtpbmc6ZGVsYXlfNCI6Ny4wLCJDb3VudGVyLVRlcnJvcmlzdDpXYWxraW5nOmRlbGF5XzUiOjguMCwiQ291bnRlci1UZXJyb3Jpc3Q6V2Fsa2luZzpkZWxheV82Ijo1LjAsIkNvdW50ZXItVGVycm9yaXN0OldhbGtpbmc6ZGVsYXlfNyI6NS4wLCJDb3VudGVyLVRlcnJvcmlzdDpXYWxraW5nOmRlbGF5XzgiOjUuMCwiQ291bnRlci1UZXJyb3Jpc3Q6V2Fsa2luZzpkZWxheV85IjoxMC4wLCJDb3VudGVyLVRlcnJvcmlzdDpXYWxraW5nOmRlbGF5X21vZGUiOiJTZXF1ZW50aWFsIiwiQ291bnRlci1UZXJyb3Jpc3Q6V2Fsa2luZzpkZWxheV9zdGVwcyI6MTAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6V2Fsa2luZzplbmFibGVkIjp0cnVlLCJDb3VudGVyLVRlcnJvcmlzdDpXYWxraW5nOmZvcmNlX2RlZmVuc2l2ZSI6dHJ1ZSwiQ291bnRlci1UZXJyb3Jpc3Q6V2Fsa2luZzpsZWZ0X2xpbWl0Ijo2MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpXYWxraW5nOmxpbWl0XzEiOjYwLjAsIkNvdW50ZXItVGVycm9yaXN0OldhbGtpbmc6bGltaXRfMiI6NTAuMCwiQ291bnRlci1UZXJyb3Jpc3Q6V2Fsa2luZzpsaW1pdF9tb2RlIjoiUmFuZG9tIiwiQ291bnRlci1UZXJyb3Jpc3Q6V2Fsa2luZzptb2RpZmllcl8xIjotMjguMCwiQ291bnRlci1UZXJyb3Jpc3Q6V2Fsa2luZzptb2RpZmllcl8xMCI6LTExLjAsIkNvdW50ZXItVGVycm9yaXN0OldhbGtpbmc6bW9kaWZpZXJfMiI6MS4wLCJDb3VudGVyLVRlcnJvcmlzdDpXYWxraW5nOm1vZGlmaWVyXzMiOi02LjAsIkNvdW50ZXItVGVycm9yaXN0OldhbGtpbmc6bW9kaWZpZXJfNCI6LTMuMCwiQ291bnRlci1UZXJyb3Jpc3Q6V2Fsa2luZzptb2RpZmllcl81Ijo3LjAsIkNvdW50ZXItVGVycm9yaXN0OldhbGtpbmc6bW9kaWZpZXJfNiI6LTkuMCwiQ291bnRlci1UZXJyb3Jpc3Q6V2Fsa2luZzptb2RpZmllcl83IjoxMi4wLCJDb3VudGVyLVRlcnJvcmlzdDpXYWxraW5nOm1vZGlmaWVyXzgiOi0xLjAsIkNvdW50ZXItVGVycm9yaXN0OldhbGtpbmc6bW9kaWZpZXJfOSI6LTExLjAsIkNvdW50ZXItVGVycm9yaXN0OldhbGtpbmc6bW9kaWZpZXJfbW9kZSI6IlNlcXVlbnRpYWwiLCJDb3VudGVyLVRlcnJvcmlzdDpXYWxraW5nOm1vZGlmaWVyX29mZnNldCI6MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpXYWxraW5nOm1vZGlmaWVyX3N0ZXBzIjoxMC4wLCJDb3VudGVyLVRlcnJvcmlzdDpXYWxraW5nOnJpZ2h0X2xpbWl0Ijo2MC4wLCJDb3VudGVyLVRlcnJvcmlzdDpXYWxraW5nOnlhd19hZGQiOnRydWUsIkNvdW50ZXItVGVycm9yaXN0OldhbGtpbmc6eWF3X2xlZnQiOi0yNy4wLCJDb3VudGVyLVRlcnJvcmlzdDpXYWxraW5nOnlhd19tb2RpZmllciI6IlJhbmRvbSIsIkNvdW50ZXItVGVycm9yaXN0OldhbGtpbmc6eWF3X29mZnNldCI6Ni4wLCJDb3VudGVyLVRlcnJvcmlzdDpXYWxraW5nOnlhd19yaWdodCI6NTUuMCwiVGVycm9yaXN0OkFpciBDcm91Y2g6Ym9keV9tb2RlIjoiUmFuZG9tIiwiVGVycm9yaXN0OkFpciBDcm91Y2g6Ym9keV90aWNrcyI6MTYuMCwiVGVycm9yaXN0OkFpciBDcm91Y2g6Ym9keV95YXciOnRydWUsIlRlcnJvcmlzdDpBaXIgQ3JvdWNoOmNob2tlXzEiOjE4LjAsIlRlcnJvcmlzdDpBaXIgQ3JvdWNoOmNob2tlXzEwIjoxNi4wLCJUZXJyb3Jpc3Q6QWlyIENyb3VjaDpjaG9rZV8yIjoxMC4wLCJUZXJyb3Jpc3Q6QWlyIENyb3VjaDpjaG9rZV8zIjoxNi4wLCJUZXJyb3Jpc3Q6QWlyIENyb3VjaDpjaG9rZV80IjoxNi4wLCJUZXJyb3Jpc3Q6QWlyIENyb3VjaDpjaG9rZV81IjoxNi4wLCJUZXJyb3Jpc3Q6QWlyIENyb3VjaDpjaG9rZV82IjoxNi4wLCJUZXJyb3Jpc3Q6QWlyIENyb3VjaDpjaG9rZV83IjoxNi4wLCJUZXJyb3Jpc3Q6QWlyIENyb3VjaDpjaG9rZV84IjoxNi4wLCJUZXJyb3Jpc3Q6QWlyIENyb3VjaDpjaG9rZV85IjoxNi4wLCJUZXJyb3Jpc3Q6QWlyIENyb3VjaDpjaG9rZV9tb2RlIjoiUmFuZG9taXplIiwiVGVycm9yaXN0OkFpciBDcm91Y2g6Y2hva2Vfc3RlcHMiOjIuMCwiVGVycm9yaXN0OkFpciBDcm91Y2g6ZGVsYXlfMSI6NS4wLCJUZXJyb3Jpc3Q6QWlyIENyb3VjaDpkZWxheV8xMCI6MC4wLCJUZXJyb3Jpc3Q6QWlyIENyb3VjaDpkZWxheV8yIjo5LjAsIlRlcnJvcmlzdDpBaXIgQ3JvdWNoOmRlbGF5XzMiOjAuMCwiVGVycm9yaXN0OkFpciBDcm91Y2g6ZGVsYXlfNCI6MC4wLCJUZXJyb3Jpc3Q6QWlyIENyb3VjaDpkZWxheV81IjowLjAsIlRlcnJvcmlzdDpBaXIgQ3JvdWNoOmRlbGF5XzYiOjAuMCwiVGVycm9yaXN0OkFpciBDcm91Y2g6ZGVsYXlfNyI6MC4wLCJUZXJyb3Jpc3Q6QWlyIENyb3VjaDpkZWxheV84IjowLjAsIlRlcnJvcmlzdDpBaXIgQ3JvdWNoOmRlbGF5XzkiOjAuMCwiVGVycm9yaXN0OkFpciBDcm91Y2g6ZGVsYXlfbW9kZSI6IlJhbmRvbWl6ZSIsIlRlcnJvcmlzdDpBaXIgQ3JvdWNoOmRlbGF5X3N0ZXBzIjoyLjAsIlRlcnJvcmlzdDpBaXIgQ3JvdWNoOmVuYWJsZWQiOnRydWUsIlRlcnJvcmlzdDpBaXIgQ3JvdWNoOmZvcmNlX2RlZmVuc2l2ZSI6dHJ1ZSwiVGVycm9yaXN0OkFpciBDcm91Y2g6bGVmdF9saW1pdCI6NjAuMCwiVGVycm9yaXN0OkFpciBDcm91Y2g6bGltaXRfMSI6NjAuMCwiVGVycm9yaXN0OkFpciBDcm91Y2g6bGltaXRfMiI6NTAuMCwiVGVycm9yaXN0OkFpciBDcm91Y2g6bGltaXRfbW9kZSI6IlJhbmRvbSIsIlRlcnJvcmlzdDpBaXIgQ3JvdWNoOm1vZGlmaWVyXzEiOi0xMS4wLCJUZXJyb3Jpc3Q6QWlyIENyb3VjaDptb2RpZmllcl8xMCI6MC4wLCJUZXJyb3Jpc3Q6QWlyIENyb3VjaDptb2RpZmllcl8yIjowLjAsIlRlcnJvcmlzdDpBaXIgQ3JvdWNoOm1vZGlmaWVyXzMiOjAuMCwiVGVycm9yaXN0OkFpciBDcm91Y2g6bW9kaWZpZXJfNCI6MC4wLCJUZXJyb3Jpc3Q6QWlyIENyb3VjaDptb2RpZmllcl81IjowLjAsIlRlcnJvcmlzdDpBaXIgQ3JvdWNoOm1vZGlmaWVyXzYiOjAuMCwiVGVycm9yaXN0OkFpciBDcm91Y2g6bW9kaWZpZXJfNyI6MC4wLCJUZXJyb3Jpc3Q6QWlyIENyb3VjaDptb2RpZmllcl84IjowLjAsIlRlcnJvcmlzdDpBaXIgQ3JvdWNoOm1vZGlmaWVyXzkiOjAuMCwiVGVycm9yaXN0OkFpciBDcm91Y2g6bW9kaWZpZXJfbW9kZSI6IlJhbmRvbWl6ZSIsIlRlcnJvcmlzdDpBaXIgQ3JvdWNoOm1vZGlmaWVyX29mZnNldCI6MC4wLCJUZXJyb3Jpc3Q6QWlyIENyb3VjaDptb2RpZmllcl9zdGVwcyI6Mi4wLCJUZXJyb3Jpc3Q6QWlyIENyb3VjaDpyaWdodF9saW1pdCI6NjAuMCwiVGVycm9yaXN0OkFpciBDcm91Y2g6eWF3X2FkZCI6dHJ1ZSwiVGVycm9yaXN0OkFpciBDcm91Y2g6eWF3X2xlZnQiOi0yMC4wLCJUZXJyb3Jpc3Q6QWlyIENyb3VjaDp5YXdfbW9kaWZpZXIiOiJSYW5kb20iLCJUZXJyb3Jpc3Q6QWlyIENyb3VjaDp5YXdfb2Zmc2V0Ijo1LjAsIlRlcnJvcmlzdDpBaXIgQ3JvdWNoOnlhd19yaWdodCI6MzkuMCwiVGVycm9yaXN0OkNyb3VjaGluZzpib2R5X21vZGUiOiJEZWZhdWx0IiwiVGVycm9yaXN0OkNyb3VjaGluZzpib2R5X3RpY2tzIjoxMC4wLCJUZXJyb3Jpc3Q6Q3JvdWNoaW5nOmJvZHlfeWF3Ijp0cnVlLCJUZXJyb3Jpc3Q6Q3JvdWNoaW5nOmNob2tlXzEiOjE2LjAsIlRlcnJvcmlzdDpDcm91Y2hpbmc6Y2hva2VfMTAiOjE2LjAsIlRlcnJvcmlzdDpDcm91Y2hpbmc6Y2hva2VfMiI6MTYuMCwiVGVycm9yaXN0OkNyb3VjaGluZzpjaG9rZV8zIjoxNi4wLCJUZXJyb3Jpc3Q6Q3JvdWNoaW5nOmNob2tlXzQiOjE2LjAsIlRlcnJvcmlzdDpDcm91Y2hpbmc6Y2hva2VfNSI6MTYuMCwiVGVycm9yaXN0OkNyb3VjaGluZzpjaG9rZV82IjoxNi4wLCJUZXJyb3Jpc3Q6Q3JvdWNoaW5nOmNob2tlXzciOjE2LjAsIlRlcnJvcmlzdDpDcm91Y2hpbmc6Y2hva2VfOCI6MTYuMCwiVGVycm9yaXN0OkNyb3VjaGluZzpjaG9rZV85IjoxNi4wLCJUZXJyb3Jpc3Q6Q3JvdWNoaW5nOmNob2tlX21vZGUiOiJEZWZhdWx0IiwiVGVycm9yaXN0OkNyb3VjaGluZzpjaG9rZV9zdGVwcyI6Mi4wLCJUZXJyb3Jpc3Q6Q3JvdWNoaW5nOmRlbGF5XzEiOjMuMCwiVGVycm9yaXN0OkNyb3VjaGluZzpkZWxheV8xMCI6MC4wLCJUZXJyb3Jpc3Q6Q3JvdWNoaW5nOmRlbGF5XzIiOjkuMCwiVGVycm9yaXN0OkNyb3VjaGluZzpkZWxheV8zIjowLjAsIlRlcnJvcmlzdDpDcm91Y2hpbmc6ZGVsYXlfNCI6MC4wLCJUZXJyb3Jpc3Q6Q3JvdWNoaW5nOmRlbGF5XzUiOjAuMCwiVGVycm9yaXN0OkNyb3VjaGluZzpkZWxheV82IjowLjAsIlRlcnJvcmlzdDpDcm91Y2hpbmc6ZGVsYXlfNyI6MC4wLCJUZXJyb3Jpc3Q6Q3JvdWNoaW5nOmRlbGF5XzgiOjAuMCwiVGVycm9yaXN0OkNyb3VjaGluZzpkZWxheV85IjowLjAsIlRlcnJvcmlzdDpDcm91Y2hpbmc6ZGVsYXlfbW9kZSI6IlJhbmRvbWl6ZSIsIlRlcnJvcmlzdDpDcm91Y2hpbmc6ZGVsYXlfc3RlcHMiOjIuMCwiVGVycm9yaXN0OkNyb3VjaGluZzplbmFibGVkIjp0cnVlLCJUZXJyb3Jpc3Q6Q3JvdWNoaW5nOmZvcmNlX2RlZmVuc2l2ZSI6ZmFsc2UsIlRlcnJvcmlzdDpDcm91Y2hpbmc6bGVmdF9saW1pdCI6NjAuMCwiVGVycm9yaXN0OkNyb3VjaGluZzpsaW1pdF8xIjo2MC4wLCJUZXJyb3Jpc3Q6Q3JvdWNoaW5nOmxpbWl0XzIiOjQ5LjAsIlRlcnJvcmlzdDpDcm91Y2hpbmc6bGltaXRfbW9kZSI6IlJhbmRvbSIsIlRlcnJvcmlzdDpDcm91Y2hpbmc6bW9kaWZpZXJfMSI6LTMuMCwiVGVycm9yaXN0OkNyb3VjaGluZzptb2RpZmllcl8xMCI6MC4wLCJUZXJyb3Jpc3Q6Q3JvdWNoaW5nOm1vZGlmaWVyXzIiOjEuMCwiVGVycm9yaXN0OkNyb3VjaGluZzptb2RpZmllcl8zIjoyMS4wLCJUZXJyb3Jpc3Q6Q3JvdWNoaW5nOm1vZGlmaWVyXzQiOi0yMy4wLCJUZXJyb3Jpc3Q6Q3JvdWNoaW5nOm1vZGlmaWVyXzUiOi0yNi4wLCJUZXJyb3Jpc3Q6Q3JvdWNoaW5nOm1vZGlmaWVyXzYiOi0xMy4wLCJUZXJyb3Jpc3Q6Q3JvdWNoaW5nOm1vZGlmaWVyXzciOjAuMCwiVGVycm9yaXN0OkNyb3VjaGluZzptb2RpZmllcl84IjowLjAsIlRlcnJvcmlzdDpDcm91Y2hpbmc6bW9kaWZpZXJfOSI6MC4wLCJUZXJyb3Jpc3Q6Q3JvdWNoaW5nOm1vZGlmaWVyX21vZGUiOiJTZXF1ZW50aWFsIiwiVGVycm9yaXN0OkNyb3VjaGluZzptb2RpZmllcl9vZmZzZXQiOjAuMCwiVGVycm9yaXN0OkNyb3VjaGluZzptb2RpZmllcl9zdGVwcyI6Ni4wLCJUZXJyb3Jpc3Q6Q3JvdWNoaW5nOnJpZ2h0X2xpbWl0Ijo1Mi4wLCJUZXJyb3Jpc3Q6Q3JvdWNoaW5nOnlhd19hZGQiOnRydWUsIlRlcnJvcmlzdDpDcm91Y2hpbmc6eWF3X2xlZnQiOi0yNy4wLCJUZXJyb3Jpc3Q6Q3JvdWNoaW5nOnlhd19tb2RpZmllciI6IlNwaW4iLCJUZXJyb3Jpc3Q6Q3JvdWNoaW5nOnlhd19vZmZzZXQiOjAuMCwiVGVycm9yaXN0OkNyb3VjaGluZzp5YXdfcmlnaHQiOjQ1LjAsIlRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6Ym9keV9tb2RlIjoiRGVmYXVsdCIsIlRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6Ym9keV90aWNrcyI6NC4wLCJUZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmJvZHlfeWF3Ijp0cnVlLCJUZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmNob2tlXzEiOjE2LjAsIlRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6Y2hva2VfMTAiOjE2LjAsIlRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6Y2hva2VfMiI6MTYuMCwiVGVycm9yaXN0OkZyZWVzdGFuZGluZzpjaG9rZV8zIjoxNi4wLCJUZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmNob2tlXzQiOjE2LjAsIlRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6Y2hva2VfNSI6MTYuMCwiVGVycm9yaXN0OkZyZWVzdGFuZGluZzpjaG9rZV82IjoxNi4wLCJUZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmNob2tlXzciOjE2LjAsIlRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6Y2hva2VfOCI6MTYuMCwiVGVycm9yaXN0OkZyZWVzdGFuZGluZzpjaG9rZV85IjoxNi4wLCJUZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmNob2tlX21vZGUiOiJEZWZhdWx0IiwiVGVycm9yaXN0OkZyZWVzdGFuZGluZzpjaG9rZV9zdGVwcyI6Mi4wLCJUZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmRlbGF5XzEiOjYuMCwiVGVycm9yaXN0OkZyZWVzdGFuZGluZzpkZWxheV8xMCI6MC4wLCJUZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmRlbGF5XzIiOjAuMCwiVGVycm9yaXN0OkZyZWVzdGFuZGluZzpkZWxheV8zIjowLjAsIlRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6ZGVsYXlfNCI6MC4wLCJUZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmRlbGF5XzUiOjAuMCwiVGVycm9yaXN0OkZyZWVzdGFuZGluZzpkZWxheV82IjowLjAsIlRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6ZGVsYXlfNyI6MC4wLCJUZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmRlbGF5XzgiOjAuMCwiVGVycm9yaXN0OkZyZWVzdGFuZGluZzpkZWxheV85IjowLjAsIlRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6ZGVsYXlfbW9kZSI6IkRlZmF1bHQiLCJUZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmRlbGF5X3N0ZXBzIjoyLjAsIlRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6ZW5hYmxlZCI6dHJ1ZSwiVGVycm9yaXN0OkZyZWVzdGFuZGluZzpmb3JjZV9kZWZlbnNpdmUiOmZhbHNlLCJUZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmxlZnRfbGltaXQiOjYwLjAsIlRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6bGltaXRfMSI6NjAuMCwiVGVycm9yaXN0OkZyZWVzdGFuZGluZzpsaW1pdF8yIjo2MC4wLCJUZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOmxpbWl0X21vZGUiOiJEZWZhdWx0IiwiVGVycm9yaXN0OkZyZWVzdGFuZGluZzptb2RpZmllcl8xIjowLjAsIlRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6bW9kaWZpZXJfMTAiOjAuMCwiVGVycm9yaXN0OkZyZWVzdGFuZGluZzptb2RpZmllcl8yIjowLjAsIlRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6bW9kaWZpZXJfMyI6MC4wLCJUZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOm1vZGlmaWVyXzQiOjAuMCwiVGVycm9yaXN0OkZyZWVzdGFuZGluZzptb2RpZmllcl81IjowLjAsIlRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6bW9kaWZpZXJfNiI6MC4wLCJUZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOm1vZGlmaWVyXzciOjAuMCwiVGVycm9yaXN0OkZyZWVzdGFuZGluZzptb2RpZmllcl84IjowLjAsIlRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6bW9kaWZpZXJfOSI6MC4wLCJUZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOm1vZGlmaWVyX21vZGUiOiJEZWZhdWx0IiwiVGVycm9yaXN0OkZyZWVzdGFuZGluZzptb2RpZmllcl9vZmZzZXQiOjAuMCwiVGVycm9yaXN0OkZyZWVzdGFuZGluZzptb2RpZmllcl9zdGVwcyI6Mi4wLCJUZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOnJpZ2h0X2xpbWl0Ijo2MC4wLCJUZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOnlhd19hZGQiOnRydWUsIlRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6eWF3X2xlZnQiOi0xNi4wLCJUZXJyb3Jpc3Q6RnJlZXN0YW5kaW5nOnlhd19tb2RpZmllciI6IkRpc2FibGVkIiwiVGVycm9yaXN0OkZyZWVzdGFuZGluZzp5YXdfb2Zmc2V0IjowLjAsIlRlcnJvcmlzdDpGcmVlc3RhbmRpbmc6eWF3X3JpZ2h0IjozNi4wLCJUZXJyb3Jpc3Q6SW4gQWlyOmJvZHlfbW9kZSI6IkRlZmF1bHQiLCJUZXJyb3Jpc3Q6SW4gQWlyOmJvZHlfdGlja3MiOjQuMCwiVGVycm9yaXN0OkluIEFpcjpib2R5X3lhdyI6dHJ1ZSwiVGVycm9yaXN0OkluIEFpcjpjaG9rZV8xIjoxNi4wLCJUZXJyb3Jpc3Q6SW4gQWlyOmNob2tlXzEwIjoxNi4wLCJUZXJyb3Jpc3Q6SW4gQWlyOmNob2tlXzIiOjE2LjAsIlRlcnJvcmlzdDpJbiBBaXI6Y2hva2VfMyI6MTYuMCwiVGVycm9yaXN0OkluIEFpcjpjaG9rZV80IjoxNi4wLCJUZXJyb3Jpc3Q6SW4gQWlyOmNob2tlXzUiOjE2LjAsIlRlcnJvcmlzdDpJbiBBaXI6Y2hva2VfNiI6MTYuMCwiVGVycm9yaXN0OkluIEFpcjpjaG9rZV83IjoxNi4wLCJUZXJyb3Jpc3Q6SW4gQWlyOmNob2tlXzgiOjE2LjAsIlRlcnJvcmlzdDpJbiBBaXI6Y2hva2VfOSI6MTYuMCwiVGVycm9yaXN0OkluIEFpcjpjaG9rZV9tb2RlIjoiRGVmYXVsdCIsIlRlcnJvcmlzdDpJbiBBaXI6Y2hva2Vfc3RlcHMiOjIuMCwiVGVycm9yaXN0OkluIEFpcjpkZWxheV8xIjozLjAsIlRlcnJvcmlzdDpJbiBBaXI6ZGVsYXlfMTAiOjAuMCwiVGVycm9yaXN0OkluIEFpcjpkZWxheV8yIjowLjAsIlRlcnJvcmlzdDpJbiBBaXI6ZGVsYXlfMyI6MC4wLCJUZXJyb3Jpc3Q6SW4gQWlyOmRlbGF5XzQiOjAuMCwiVGVycm9yaXN0OkluIEFpcjpkZWxheV81IjowLjAsIlRlcnJvcmlzdDpJbiBBaXI6ZGVsYXlfNiI6MC4wLCJUZXJyb3Jpc3Q6SW4gQWlyOmRlbGF5XzciOjAuMCwiVGVycm9yaXN0OkluIEFpcjpkZWxheV84IjowLjAsIlRlcnJvcmlzdDpJbiBBaXI6ZGVsYXlfOSI6MC4wLCJUZXJyb3Jpc3Q6SW4gQWlyOmRlbGF5X21vZGUiOiJEZWZhdWx0IiwiVGVycm9yaXN0OkluIEFpcjpkZWxheV9zdGVwcyI6Mi4wLCJUZXJyb3Jpc3Q6SW4gQWlyOmVuYWJsZWQiOnRydWUsIlRlcnJvcmlzdDpJbiBBaXI6Zm9yY2VfZGVmZW5zaXZlIjpmYWxzZSwiVGVycm9yaXN0OkluIEFpcjpsZWZ0X2xpbWl0Ijo2MC4wLCJUZXJyb3Jpc3Q6SW4gQWlyOmxpbWl0XzEiOjYwLjAsIlRlcnJvcmlzdDpJbiBBaXI6bGltaXRfMiI6NTEuMCwiVGVycm9yaXN0OkluIEFpcjpsaW1pdF9tb2RlIjoiU3dpdGNoIiwiVGVycm9yaXN0OkluIEFpcjptb2RpZmllcl8xIjowLjAsIlRlcnJvcmlzdDpJbiBBaXI6bW9kaWZpZXJfMTAiOjAuMCwiVGVycm9yaXN0OkluIEFpcjptb2RpZmllcl8yIjowLjAsIlRlcnJvcmlzdDpJbiBBaXI6bW9kaWZpZXJfMyI6MC4wLCJUZXJyb3Jpc3Q6SW4gQWlyOm1vZGlmaWVyXzQiOjAuMCwiVGVycm9yaXN0OkluIEFpcjptb2RpZmllcl81IjowLjAsIlRlcnJvcmlzdDpJbiBBaXI6bW9kaWZpZXJfNiI6MC4wLCJUZXJyb3Jpc3Q6SW4gQWlyOm1vZGlmaWVyXzciOjAuMCwiVGVycm9yaXN0OkluIEFpcjptb2RpZmllcl84IjowLjAsIlRlcnJvcmlzdDpJbiBBaXI6bW9kaWZpZXJfOSI6MC4wLCJUZXJyb3Jpc3Q6SW4gQWlyOm1vZGlmaWVyX21vZGUiOiJEZWZhdWx0IiwiVGVycm9yaXN0OkluIEFpcjptb2RpZmllcl9vZmZzZXQiOjAuMCwiVGVycm9yaXN0OkluIEFpcjptb2RpZmllcl9zdGVwcyI6Mi4wLCJUZXJyb3Jpc3Q6SW4gQWlyOnJpZ2h0X2xpbWl0Ijo2MC4wLCJUZXJyb3Jpc3Q6SW4gQWlyOnlhd19hZGQiOnRydWUsIlRlcnJvcmlzdDpJbiBBaXI6eWF3X2xlZnQiOi0yMi4wLCJUZXJyb3Jpc3Q6SW4gQWlyOnlhd19tb2RpZmllciI6IkRpc2FibGVkIiwiVGVycm9yaXN0OkluIEFpcjp5YXdfb2Zmc2V0IjowLjAsIlRlcnJvcmlzdDpJbiBBaXI6eWF3X3JpZ2h0IjozOC4wLCJUZXJyb3Jpc3Q6TWFudWFsIFlhdzpib2R5X21vZGUiOiJEZWZhdWx0IiwiVGVycm9yaXN0Ok1hbnVhbCBZYXc6Ym9keV90aWNrcyI6NC4wLCJUZXJyb3Jpc3Q6TWFudWFsIFlhdzpib2R5X3lhdyI6dHJ1ZSwiVGVycm9yaXN0Ok1hbnVhbCBZYXc6Y2hva2VfMSI6MTYuMCwiVGVycm9yaXN0Ok1hbnVhbCBZYXc6Y2hva2VfMTAiOjE2LjAsIlRlcnJvcmlzdDpNYW51YWwgWWF3OmNob2tlXzIiOjE2LjAsIlRlcnJvcmlzdDpNYW51YWwgWWF3OmNob2tlXzMiOjE2LjAsIlRlcnJvcmlzdDpNYW51YWwgWWF3OmNob2tlXzQiOjE2LjAsIlRlcnJvcmlzdDpNYW51YWwgWWF3OmNob2tlXzUiOjE2LjAsIlRlcnJvcmlzdDpNYW51YWwgWWF3OmNob2tlXzYiOjE2LjAsIlRlcnJvcmlzdDpNYW51YWwgWWF3OmNob2tlXzciOjE2LjAsIlRlcnJvcmlzdDpNYW51YWwgWWF3OmNob2tlXzgiOjE2LjAsIlRlcnJvcmlzdDpNYW51YWwgWWF3OmNob2tlXzkiOjE2LjAsIlRlcnJvcmlzdDpNYW51YWwgWWF3OmNob2tlX21vZGUiOiJEZWZhdWx0IiwiVGVycm9yaXN0Ok1hbnVhbCBZYXc6Y2hva2Vfc3RlcHMiOjIuMCwiVGVycm9yaXN0Ok1hbnVhbCBZYXc6ZGVsYXlfMSI6MC4wLCJUZXJyb3Jpc3Q6TWFudWFsIFlhdzpkZWxheV8xMCI6MC4wLCJUZXJyb3Jpc3Q6TWFudWFsIFlhdzpkZWxheV8yIjowLjAsIlRlcnJvcmlzdDpNYW51YWwgWWF3OmRlbGF5XzMiOjAuMCwiVGVycm9yaXN0Ok1hbnVhbCBZYXc6ZGVsYXlfNCI6MC4wLCJUZXJyb3Jpc3Q6TWFudWFsIFlhdzpkZWxheV81IjowLjAsIlRlcnJvcmlzdDpNYW51YWwgWWF3OmRlbGF5XzYiOjAuMCwiVGVycm9yaXN0Ok1hbnVhbCBZYXc6ZGVsYXlfNyI6MC4wLCJUZXJyb3Jpc3Q6TWFudWFsIFlhdzpkZWxheV84IjowLjAsIlRlcnJvcmlzdDpNYW51YWwgWWF3OmRlbGF5XzkiOjAuMCwiVGVycm9yaXN0Ok1hbnVhbCBZYXc6ZGVsYXlfbW9kZSI6IkRlZmF1bHQiLCJUZXJyb3Jpc3Q6TWFudWFsIFlhdzpkZWxheV9zdGVwcyI6Mi4wLCJUZXJyb3Jpc3Q6TWFudWFsIFlhdzplbmFibGVkIjp0cnVlLCJUZXJyb3Jpc3Q6TWFudWFsIFlhdzpmb3JjZV9kZWZlbnNpdmUiOmZhbHNlLCJUZXJyb3Jpc3Q6TWFudWFsIFlhdzpsZWZ0X2xpbWl0Ijo2MC4wLCJUZXJyb3Jpc3Q6TWFudWFsIFlhdzpsaW1pdF8xIjo2MC4wLCJUZXJyb3Jpc3Q6TWFudWFsIFlhdzpsaW1pdF8yIjo2MC4wLCJUZXJyb3Jpc3Q6TWFudWFsIFlhdzpsaW1pdF9tb2RlIjoiRGVmYXVsdCIsIlRlcnJvcmlzdDpNYW51YWwgWWF3Om1vZGlmaWVyXzEiOjAuMCwiVGVycm9yaXN0Ok1hbnVhbCBZYXc6bW9kaWZpZXJfMTAiOjAuMCwiVGVycm9yaXN0Ok1hbnVhbCBZYXc6bW9kaWZpZXJfMiI6MC4wLCJUZXJyb3Jpc3Q6TWFudWFsIFlhdzptb2RpZmllcl8zIjowLjAsIlRlcnJvcmlzdDpNYW51YWwgWWF3Om1vZGlmaWVyXzQiOjAuMCwiVGVycm9yaXN0Ok1hbnVhbCBZYXc6bW9kaWZpZXJfNSI6MC4wLCJUZXJyb3Jpc3Q6TWFudWFsIFlhdzptb2RpZmllcl82IjowLjAsIlRlcnJvcmlzdDpNYW51YWwgWWF3Om1vZGlmaWVyXzciOjAuMCwiVGVycm9yaXN0Ok1hbnVhbCBZYXc6bW9kaWZpZXJfOCI6MC4wLCJUZXJyb3Jpc3Q6TWFudWFsIFlhdzptb2RpZmllcl85IjowLjAsIlRlcnJvcmlzdDpNYW51YWwgWWF3Om1vZGlmaWVyX21vZGUiOiJEZWZhdWx0IiwiVGVycm9yaXN0Ok1hbnVhbCBZYXc6bW9kaWZpZXJfb2Zmc2V0IjowLjAsIlRlcnJvcmlzdDpNYW51YWwgWWF3Om1vZGlmaWVyX3N0ZXBzIjoyLjAsIlRlcnJvcmlzdDpNYW51YWwgWWF3OnJpZ2h0X2xpbWl0Ijo2MC4wLCJUZXJyb3Jpc3Q6TWFudWFsIFlhdzp5YXdfYWRkIjpmYWxzZSwiVGVycm9yaXN0Ok1hbnVhbCBZYXc6eWF3X2xlZnQiOjAuMCwiVGVycm9yaXN0Ok1hbnVhbCBZYXc6eWF3X21vZGlmaWVyIjoiRGlzYWJsZWQiLCJUZXJyb3Jpc3Q6TWFudWFsIFlhdzp5YXdfb2Zmc2V0IjowLjAsIlRlcnJvcmlzdDpNYW51YWwgWWF3Onlhd19yaWdodCI6MC4wLCJUZXJyb3Jpc3Q6UnVubmluZzpib2R5X21vZGUiOiJSYW5kb20iLCJUZXJyb3Jpc3Q6UnVubmluZzpib2R5X3RpY2tzIjoxMi4wLCJUZXJyb3Jpc3Q6UnVubmluZzpib2R5X3lhdyI6dHJ1ZSwiVGVycm9yaXN0OlJ1bm5pbmc6Y2hva2VfMSI6MS4wLCJUZXJyb3Jpc3Q6UnVubmluZzpjaG9rZV8xMCI6MTYuMCwiVGVycm9yaXN0OlJ1bm5pbmc6Y2hva2VfMiI6MjIuMCwiVGVycm9yaXN0OlJ1bm5pbmc6Y2hva2VfMyI6MTYuMCwiVGVycm9yaXN0OlJ1bm5pbmc6Y2hva2VfNCI6MTYuMCwiVGVycm9yaXN0OlJ1bm5pbmc6Y2hva2VfNSI6MTYuMCwiVGVycm9yaXN0OlJ1bm5pbmc6Y2hva2VfNiI6MTYuMCwiVGVycm9yaXN0OlJ1bm5pbmc6Y2hva2VfNyI6MTYuMCwiVGVycm9yaXN0OlJ1bm5pbmc6Y2hva2VfOCI6MTYuMCwiVGVycm9yaXN0OlJ1bm5pbmc6Y2hva2VfOSI6MTYuMCwiVGVycm9yaXN0OlJ1bm5pbmc6Y2hva2VfbW9kZSI6IkRlZmF1bHQiLCJUZXJyb3Jpc3Q6UnVubmluZzpjaG9rZV9zdGVwcyI6Mi4wLCJUZXJyb3Jpc3Q6UnVubmluZzpkZWxheV8xIjo0LjAsIlRlcnJvcmlzdDpSdW5uaW5nOmRlbGF5XzEwIjo1LjAsIlRlcnJvcmlzdDpSdW5uaW5nOmRlbGF5XzIiOjEuMCwiVGVycm9yaXN0OlJ1bm5pbmc6ZGVsYXlfMyI6NS4wLCJUZXJyb3Jpc3Q6UnVubmluZzpkZWxheV80IjoxLjAsIlRlcnJvcmlzdDpSdW5uaW5nOmRlbGF5XzUiOjYuMCwiVGVycm9yaXN0OlJ1bm5pbmc6ZGVsYXlfNiI6MS4wLCJUZXJyb3Jpc3Q6UnVubmluZzpkZWxheV83IjoxLjAsIlRlcnJvcmlzdDpSdW5uaW5nOmRlbGF5XzgiOjMuMCwiVGVycm9yaXN0OlJ1bm5pbmc6ZGVsYXlfOSI6Mi4wLCJUZXJyb3Jpc3Q6UnVubmluZzpkZWxheV9tb2RlIjoiU2VxdWVudGlhbCIsIlRlcnJvcmlzdDpSdW5uaW5nOmRlbGF5X3N0ZXBzIjoxLjAsIlRlcnJvcmlzdDpSdW5uaW5nOmVuYWJsZWQiOnRydWUsIlRlcnJvcmlzdDpSdW5uaW5nOmZvcmNlX2RlZmVuc2l2ZSI6ZmFsc2UsIlRlcnJvcmlzdDpSdW5uaW5nOmxlZnRfbGltaXQiOjYwLjAsIlRlcnJvcmlzdDpSdW5uaW5nOmxpbWl0XzEiOjYwLjAsIlRlcnJvcmlzdDpSdW5uaW5nOmxpbWl0XzIiOjQ4LjAsIlRlcnJvcmlzdDpSdW5uaW5nOmxpbWl0X21vZGUiOiJTd2l0Y2giLCJUZXJyb3Jpc3Q6UnVubmluZzptb2RpZmllcl8xIjotNS4wLCJUZXJyb3Jpc3Q6UnVubmluZzptb2RpZmllcl8xMCI6MC4wLCJUZXJyb3Jpc3Q6UnVubmluZzptb2RpZmllcl8yIjoxNi4wLCJUZXJyb3Jpc3Q6UnVubmluZzptb2RpZmllcl8zIjowLjAsIlRlcnJvcmlzdDpSdW5uaW5nOm1vZGlmaWVyXzQiOjAuMCwiVGVycm9yaXN0OlJ1bm5pbmc6bW9kaWZpZXJfNSI6MC4wLCJUZXJyb3Jpc3Q6UnVubmluZzptb2RpZmllcl82IjowLjAsIlRlcnJvcmlzdDpSdW5uaW5nOm1vZGlmaWVyXzciOjAuMCwiVGVycm9yaXN0OlJ1bm5pbmc6bW9kaWZpZXJfOCI6MC4wLCJUZXJyb3Jpc3Q6UnVubmluZzptb2RpZmllcl85IjowLjAsIlRlcnJvcmlzdDpSdW5uaW5nOm1vZGlmaWVyX21vZGUiOiJTZXF1ZW50aWFsIiwiVGVycm9yaXN0OlJ1bm5pbmc6bW9kaWZpZXJfb2Zmc2V0IjowLjAsIlRlcnJvcmlzdDpSdW5uaW5nOm1vZGlmaWVyX3N0ZXBzIjoyLjAsIlRlcnJvcmlzdDpSdW5uaW5nOnJpZ2h0X2xpbWl0Ijo2MC4wLCJUZXJyb3Jpc3Q6UnVubmluZzp5YXdfYWRkIjp0cnVlLCJUZXJyb3Jpc3Q6UnVubmluZzp5YXdfbGVmdCI6LTE2LjAsIlRlcnJvcmlzdDpSdW5uaW5nOnlhd19tb2RpZmllciI6IkRpc2FibGVkIiwiVGVycm9yaXN0OlJ1bm5pbmc6eWF3X29mZnNldCI6MC4wLCJUZXJyb3Jpc3Q6UnVubmluZzp5YXdfcmlnaHQiOjM2LjAsIlRlcnJvcmlzdDpTbmVha2luZzpib2R5X21vZGUiOiJSYW5kb20iLCJUZXJyb3Jpc3Q6U25lYWtpbmc6Ym9keV90aWNrcyI6MTIuMCwiVGVycm9yaXN0OlNuZWFraW5nOmJvZHlfeWF3Ijp0cnVlLCJUZXJyb3Jpc3Q6U25lYWtpbmc6Y2hva2VfMSI6MTYuMCwiVGVycm9yaXN0OlNuZWFraW5nOmNob2tlXzEwIjoxNi4wLCJUZXJyb3Jpc3Q6U25lYWtpbmc6Y2hva2VfMiI6MTYuMCwiVGVycm9yaXN0OlNuZWFraW5nOmNob2tlXzMiOjE2LjAsIlRlcnJvcmlzdDpTbmVha2luZzpjaG9rZV80IjoxNi4wLCJUZXJyb3Jpc3Q6U25lYWtpbmc6Y2hva2VfNSI6MTYuMCwiVGVycm9yaXN0OlNuZWFraW5nOmNob2tlXzYiOjE2LjAsIlRlcnJvcmlzdDpTbmVha2luZzpjaG9rZV83IjoxNi4wLCJUZXJyb3Jpc3Q6U25lYWtpbmc6Y2hva2VfOCI6MTYuMCwiVGVycm9yaXN0OlNuZWFraW5nOmNob2tlXzkiOjE2LjAsIlRlcnJvcmlzdDpTbmVha2luZzpjaG9rZV9tb2RlIjoiRGVmYXVsdCIsIlRlcnJvcmlzdDpTbmVha2luZzpjaG9rZV9zdGVwcyI6Mi4wLCJUZXJyb3Jpc3Q6U25lYWtpbmc6ZGVsYXlfMSI6NC4wLCJUZXJyb3Jpc3Q6U25lYWtpbmc6ZGVsYXlfMTAiOjAuMCwiVGVycm9yaXN0OlNuZWFraW5nOmRlbGF5XzIiOjguMCwiVGVycm9yaXN0OlNuZWFraW5nOmRlbGF5XzMiOjAuMCwiVGVycm9yaXN0OlNuZWFraW5nOmRlbGF5XzQiOjAuMCwiVGVycm9yaXN0OlNuZWFraW5nOmRlbGF5XzUiOjAuMCwiVGVycm9yaXN0OlNuZWFraW5nOmRlbGF5XzYiOjAuMCwiVGVycm9yaXN0OlNuZWFraW5nOmRlbGF5XzciOjAuMCwiVGVycm9yaXN0OlNuZWFraW5nOmRlbGF5XzgiOjAuMCwiVGVycm9yaXN0OlNuZWFraW5nOmRlbGF5XzkiOjAuMCwiVGVycm9yaXN0OlNuZWFraW5nOmRlbGF5X21vZGUiOiJTZXF1ZW50aWFsIiwiVGVycm9yaXN0OlNuZWFraW5nOmRlbGF5X3N0ZXBzIjoyLjAsIlRlcnJvcmlzdDpTbmVha2luZzplbmFibGVkIjp0cnVlLCJUZXJyb3Jpc3Q6U25lYWtpbmc6Zm9yY2VfZGVmZW5zaXZlIjpmYWxzZSwiVGVycm9yaXN0OlNuZWFraW5nOmxlZnRfbGltaXQiOjYwLjAsIlRlcnJvcmlzdDpTbmVha2luZzpsaW1pdF8xIjo2MC4wLCJUZXJyb3Jpc3Q6U25lYWtpbmc6bGltaXRfMiI6NTEuMCwiVGVycm9yaXN0OlNuZWFraW5nOmxpbWl0X21vZGUiOiJTd2l0Y2giLCJUZXJyb3Jpc3Q6U25lYWtpbmc6bW9kaWZpZXJfMSI6MC4wLCJUZXJyb3Jpc3Q6U25lYWtpbmc6bW9kaWZpZXJfMTAiOjAuMCwiVGVycm9yaXN0OlNuZWFraW5nOm1vZGlmaWVyXzIiOjAuMCwiVGVycm9yaXN0OlNuZWFraW5nOm1vZGlmaWVyXzMiOjAuMCwiVGVycm9yaXN0OlNuZWFraW5nOm1vZGlmaWVyXzQiOjAuMCwiVGVycm9yaXN0OlNuZWFraW5nOm1vZGlmaWVyXzUiOjAuMCwiVGVycm9yaXN0OlNuZWFraW5nOm1vZGlmaWVyXzYiOjAuMCwiVGVycm9yaXN0OlNuZWFraW5nOm1vZGlmaWVyXzciOjAuMCwiVGVycm9yaXN0OlNuZWFraW5nOm1vZGlmaWVyXzgiOjAuMCwiVGVycm9yaXN0OlNuZWFraW5nOm1vZGlmaWVyXzkiOjAuMCwiVGVycm9yaXN0OlNuZWFraW5nOm1vZGlmaWVyX21vZGUiOiJEZWZhdWx0IiwiVGVycm9yaXN0OlNuZWFraW5nOm1vZGlmaWVyX29mZnNldCI6LTUuMCwiVGVycm9yaXN0OlNuZWFraW5nOm1vZGlmaWVyX3N0ZXBzIjoyLjAsIlRlcnJvcmlzdDpTbmVha2luZzpyaWdodF9saW1pdCI6NjAuMCwiVGVycm9yaXN0OlNuZWFraW5nOnlhd19hZGQiOnRydWUsIlRlcnJvcmlzdDpTbmVha2luZzp5YXdfbGVmdCI6LTI3LjAsIlRlcnJvcmlzdDpTbmVha2luZzp5YXdfbW9kaWZpZXIiOiJSYW5kb20iLCJUZXJyb3Jpc3Q6U25lYWtpbmc6eWF3X29mZnNldCI6NS4wLCJUZXJyb3Jpc3Q6U25lYWtpbmc6eWF3X3JpZ2h0Ijo0NC4wLCJUZXJyb3Jpc3Q6U3RhbmRpbmc6Ym9keV9tb2RlIjoiUmFuZG9tIiwiVGVycm9yaXN0OlN0YW5kaW5nOmJvZHlfdGlja3MiOjEyLjAsIlRlcnJvcmlzdDpTdGFuZGluZzpib2R5X3lhdyI6dHJ1ZSwiVGVycm9yaXN0OlN0YW5kaW5nOmNob2tlXzEiOjMuMCwiVGVycm9yaXN0OlN0YW5kaW5nOmNob2tlXzEwIjoxLjAsIlRlcnJvcmlzdDpTdGFuZGluZzpjaG9rZV8yIjoxOS4wLCJUZXJyb3Jpc3Q6U3RhbmRpbmc6Y2hva2VfMyI6MTUuMCwiVGVycm9yaXN0OlN0YW5kaW5nOmNob2tlXzQiOjYuMCwiVGVycm9yaXN0OlN0YW5kaW5nOmNob2tlXzUiOjEzLjAsIlRlcnJvcmlzdDpTdGFuZGluZzpjaG9rZV82IjoyLjAsIlRlcnJvcmlzdDpTdGFuZGluZzpjaG9rZV83IjoxOC4wLCJUZXJyb3Jpc3Q6U3RhbmRpbmc6Y2hva2VfOCI6MjIuMCwiVGVycm9yaXN0OlN0YW5kaW5nOmNob2tlXzkiOjguMCwiVGVycm9yaXN0OlN0YW5kaW5nOmNob2tlX21vZGUiOiJTZXF1ZW50aWFsIiwiVGVycm9yaXN0OlN0YW5kaW5nOmNob2tlX3N0ZXBzIjoxMC4wLCJUZXJyb3Jpc3Q6U3RhbmRpbmc6ZGVsYXlfMSI6Ny4wLCJUZXJyb3Jpc3Q6U3RhbmRpbmc6ZGVsYXlfMTAiOjAuMCwiVGVycm9yaXN0OlN0YW5kaW5nOmRlbGF5XzIiOjUuMCwiVGVycm9yaXN0OlN0YW5kaW5nOmRlbGF5XzMiOjIuMCwiVGVycm9yaXN0OlN0YW5kaW5nOmRlbGF5XzQiOjYuMCwiVGVycm9yaXN0OlN0YW5kaW5nOmRlbGF5XzUiOjcuMCwiVGVycm9yaXN0OlN0YW5kaW5nOmRlbGF5XzYiOjYuMCwiVGVycm9yaXN0OlN0YW5kaW5nOmRlbGF5XzciOjAuMCwiVGVycm9yaXN0OlN0YW5kaW5nOmRlbGF5XzgiOjAuMCwiVGVycm9yaXN0OlN0YW5kaW5nOmRlbGF5XzkiOjAuMCwiVGVycm9yaXN0OlN0YW5kaW5nOmRlbGF5X21vZGUiOiJTZXF1ZW50aWFsIiwiVGVycm9yaXN0OlN0YW5kaW5nOmRlbGF5X3N0ZXBzIjo2LjAsIlRlcnJvcmlzdDpTdGFuZGluZzplbmFibGVkIjp0cnVlLCJUZXJyb3Jpc3Q6U3RhbmRpbmc6Zm9yY2VfZGVmZW5zaXZlIjp0cnVlLCJUZXJyb3Jpc3Q6U3RhbmRpbmc6bGVmdF9saW1pdCI6NjAuMCwiVGVycm9yaXN0OlN0YW5kaW5nOmxpbWl0XzEiOjYwLjAsIlRlcnJvcmlzdDpTdGFuZGluZzpsaW1pdF8yIjo1MC4wLCJUZXJyb3Jpc3Q6U3RhbmRpbmc6bGltaXRfbW9kZSI6IlJhbmRvbSIsIlRlcnJvcmlzdDpTdGFuZGluZzptb2RpZmllcl8xIjoyMC4wLCJUZXJyb3Jpc3Q6U3RhbmRpbmc6bW9kaWZpZXJfMTAiOjAuMCwiVGVycm9yaXN0OlN0YW5kaW5nOm1vZGlmaWVyXzIiOjE3LjAsIlRlcnJvcmlzdDpTdGFuZGluZzptb2RpZmllcl8zIjoyNi4wLCJUZXJyb3Jpc3Q6U3RhbmRpbmc6bW9kaWZpZXJfNCI6LTE0LjAsIlRlcnJvcmlzdDpTdGFuZGluZzptb2RpZmllcl81Ijo3LjAsIlRlcnJvcmlzdDpTdGFuZGluZzptb2RpZmllcl82IjotNi4wLCJUZXJyb3Jpc3Q6U3RhbmRpbmc6bW9kaWZpZXJfNyI6MC4wLCJUZXJyb3Jpc3Q6U3RhbmRpbmc6bW9kaWZpZXJfOCI6MC4wLCJUZXJyb3Jpc3Q6U3RhbmRpbmc6bW9kaWZpZXJfOSI6MC4wLCJUZXJyb3Jpc3Q6U3RhbmRpbmc6bW9kaWZpZXJfbW9kZSI6IlNlcXVlbnRpYWwiLCJUZXJyb3Jpc3Q6U3RhbmRpbmc6bW9kaWZpZXJfb2Zmc2V0IjowLjAsIlRlcnJvcmlzdDpTdGFuZGluZzptb2RpZmllcl9zdGVwcyI6Ni4wLCJUZXJyb3Jpc3Q6U3RhbmRpbmc6cmlnaHRfbGltaXQiOjYwLjAsIlRlcnJvcmlzdDpTdGFuZGluZzp5YXdfYWRkIjp0cnVlLCJUZXJyb3Jpc3Q6U3RhbmRpbmc6eWF3X2xlZnQiOi0yMC4wLCJUZXJyb3Jpc3Q6U3RhbmRpbmc6eWF3X21vZGlmaWVyIjoiNS1XYXkiLCJUZXJyb3Jpc3Q6U3RhbmRpbmc6eWF3X29mZnNldCI6NS4wLCJUZXJyb3Jpc3Q6U3RhbmRpbmc6eWF3X3JpZ2h0IjozOC4wLCJUZXJyb3Jpc3Q6V2Fsa2luZzpib2R5X21vZGUiOiJSYW5kb20iLCJUZXJyb3Jpc3Q6V2Fsa2luZzpib2R5X3RpY2tzIjoxMS4wLCJUZXJyb3Jpc3Q6V2Fsa2luZzpib2R5X3lhdyI6dHJ1ZSwiVGVycm9yaXN0OldhbGtpbmc6Y2hva2VfMSI6MTIuMCwiVGVycm9yaXN0OldhbGtpbmc6Y2hva2VfMTAiOjIyLjAsIlRlcnJvcmlzdDpXYWxraW5nOmNob2tlXzIiOjIyLjAsIlRlcnJvcmlzdDpXYWxraW5nOmNob2tlXzMiOjYuMCwiVGVycm9yaXN0OldhbGtpbmc6Y2hva2VfNCI6MTIuMCwiVGVycm9yaXN0OldhbGtpbmc6Y2hva2VfNSI6MTQuMCwiVGVycm9yaXN0OldhbGtpbmc6Y2hva2VfNiI6MjIuMCwiVGVycm9yaXN0OldhbGtpbmc6Y2hva2VfNyI6NS4wLCJUZXJyb3Jpc3Q6V2Fsa2luZzpjaG9rZV84IjoyMi4wLCJUZXJyb3Jpc3Q6V2Fsa2luZzpjaG9rZV85IjoxMi4wLCJUZXJyb3Jpc3Q6V2Fsa2luZzpjaG9rZV9tb2RlIjoiU2VxdWVudGlhbCIsIlRlcnJvcmlzdDpXYWxraW5nOmNob2tlX3N0ZXBzIjoxMC4wLCJUZXJyb3Jpc3Q6V2Fsa2luZzpkZWxheV8xIjoyLjAsIlRlcnJvcmlzdDpXYWxraW5nOmRlbGF5XzEwIjo1LjAsIlRlcnJvcmlzdDpXYWxraW5nOmRlbGF5XzIiOjQuMCwiVGVycm9yaXN0OldhbGtpbmc6ZGVsYXlfMyI6MC4wLCJUZXJyb3Jpc3Q6V2Fsa2luZzpkZWxheV80Ijo3LjAsIlRlcnJvcmlzdDpXYWxraW5nOmRlbGF5XzUiOjguMCwiVGVycm9yaXN0OldhbGtpbmc6ZGVsYXlfNiI6NS4wLCJUZXJyb3Jpc3Q6V2Fsa2luZzpkZWxheV83Ijo1LjAsIlRlcnJvcmlzdDpXYWxraW5nOmRlbGF5XzgiOjUuMCwiVGVycm9yaXN0OldhbGtpbmc6ZGVsYXlfOSI6MTAuMCwiVGVycm9yaXN0OldhbGtpbmc6ZGVsYXlfbW9kZSI6IlNlcXVlbnRpYWwiLCJUZXJyb3Jpc3Q6V2Fsa2luZzpkZWxheV9zdGVwcyI6MTAuMCwiVGVycm9yaXN0OldhbGtpbmc6ZW5hYmxlZCI6dHJ1ZSwiVGVycm9yaXN0OldhbGtpbmc6Zm9yY2VfZGVmZW5zaXZlIjp0cnVlLCJUZXJyb3Jpc3Q6V2Fsa2luZzpsZWZ0X2xpbWl0Ijo2MC4wLCJUZXJyb3Jpc3Q6V2Fsa2luZzpsaW1pdF8xIjo2MC4wLCJUZXJyb3Jpc3Q6V2Fsa2luZzpsaW1pdF8yIjo1MC4wLCJUZXJyb3Jpc3Q6V2Fsa2luZzpsaW1pdF9tb2RlIjoiUmFuZG9tIiwiVGVycm9yaXN0OldhbGtpbmc6bW9kaWZpZXJfMSI6LTI4LjAsIlRlcnJvcmlzdDpXYWxraW5nOm1vZGlmaWVyXzEwIjotMTEuMCwiVGVycm9yaXN0OldhbGtpbmc6bW9kaWZpZXJfMiI6MS4wLCJUZXJyb3Jpc3Q6V2Fsa2luZzptb2RpZmllcl8zIjotNi4wLCJUZXJyb3Jpc3Q6V2Fsa2luZzptb2RpZmllcl80IjotMy4wLCJUZXJyb3Jpc3Q6V2Fsa2luZzptb2RpZmllcl81Ijo3LjAsIlRlcnJvcmlzdDpXYWxraW5nOm1vZGlmaWVyXzYiOi05LjAsIlRlcnJvcmlzdDpXYWxraW5nOm1vZGlmaWVyXzciOjEyLjAsIlRlcnJvcmlzdDpXYWxraW5nOm1vZGlmaWVyXzgiOi0xLjAsIlRlcnJvcmlzdDpXYWxraW5nOm1vZGlmaWVyXzkiOi0xMS4wLCJUZXJyb3Jpc3Q6V2Fsa2luZzptb2RpZmllcl9tb2RlIjoiU2VxdWVudGlhbCIsIlRlcnJvcmlzdDpXYWxraW5nOm1vZGlmaWVyX29mZnNldCI6MC4wLCJUZXJyb3Jpc3Q6V2Fsa2luZzptb2RpZmllcl9zdGVwcyI6MTAuMCwiVGVycm9yaXN0OldhbGtpbmc6cmlnaHRfbGltaXQiOjYwLjAsIlRlcnJvcmlzdDpXYWxraW5nOnlhd19hZGQiOnRydWUsIlRlcnJvcmlzdDpXYWxraW5nOnlhd19sZWZ0IjotMjcuMCwiVGVycm9yaXN0OldhbGtpbmc6eWF3X21vZGlmaWVyIjoiUmFuZG9tIiwiVGVycm9yaXN0OldhbGtpbmc6eWF3X29mZnNldCI6Ni4wLCJUZXJyb3Jpc3Q6V2Fsa2luZzp5YXdfcmlnaHQiOjU1LjAsImFsbG93X29uX3VzZS5lbmFibGVkIjpmYWxzZSwiYW50aV9icnV0ZWZvcmNlLmNvbmRpdGlvbnMiOltdLCJhbnRpX2JydXRlZm9yY2UuZW5hYmxlZCI6ZmFsc2UsImFudGlfYnJ1dGVmb3JjZS5tb2RlIjoiSW5jcmVhc2UiLCJhbnRpX2JydXRlZm9yY2UudGltZSI6MzAuMCwiYXZvaWRfYmFja3N0YWIuZW5hYmxlZCI6ZmFsc2UsImRpc2FibGVycy5ub19lbmVtaWVzIjpmYWxzZSwiZGlzYWJsZXJzLm9uX3dhcm11cCI6ZmFsc2UsImZyZWVzdGFuZGluZy5kaXNhYmxlcnMiOltdLCJmcmVlc3RhbmRpbmcuZW5hYmxlZCI6ZmFsc2UsIm1hbnVhbF95YXcuZGlyZWN0aW9uIjoiRGlzYWJsZWQiLCJzYWZlX2hlYWQuY29uZGl0aW9ucyI6W10sInNhZmVfaGVhZC5lbmFibGVkIjpmYWxzZX0sIkludGVyZmFjZSI6eyJkYW1hZ2VfaW5kaWNhdG9yLmNvbG9yIjoiRkZGRkZGRkYiLCJkYW1hZ2VfaW5kaWNhdG9yLmVuYWJsZWQiOnRydWUsImRhbWFnZV9pbmRpY2F0b3IuZm9udCI6IkRlZmF1bHQiLCJkYW1hZ2VfaW5kaWNhdG9yOngiOjk2MC4wLCJkYW1hZ2VfaW5kaWNhdG9yOnkiOjU0MC4wLCJtYW51YWxfYXJyb3dzLmNvbG9yIjoiQzBDQUZGRkYiLCJtYW51YWxfYXJyb3dzLmVuYWJsZWQiOnRydWUsIm1hbnVhbF9hcnJvd3MuZm9udCI6IkJvbGQiLCJtYW51YWxfYXJyb3dzLmxlZnQiOiI8IiwibWFudWFsX2Fycm93cy5vZmZzZXQiOjQwLjAsIm1hbnVhbF9hcnJvd3MucmlnaHQiOiI+IiwibWFudWFsX2Fycm93cy5zdHlsZSI6IkN1c3RvbSIsInNrZWV0X2luZGljYXRvcnMuQk9EWSI6IkJPRFkiLCJza2VldF9pbmRpY2F0b3JzLkRBIjoiREEiLCJza2VldF9pbmRpY2F0b3JzLkRUIjoiRFQiLCJza2VldF9pbmRpY2F0b3JzLkRVQ0siOiJEVUNLIiwic2tlZXRfaW5kaWNhdG9ycy5GUyI6IkZTIiwic2tlZXRfaW5kaWNhdG9ycy5IQyI6IkhDIiwic2tlZXRfaW5kaWNhdG9ycy5NRCI6Ik1EIiwic2tlZXRfaW5kaWNhdG9ycy5PU0FBIjoiT1NBQSIsInNrZWV0X2luZGljYXRvcnMuUElORyI6IlBJTkciLCJza2VldF9pbmRpY2F0b3JzLlNBRkUiOiJTQUZFIiwic2tlZXRfaW5kaWNhdG9ycy5jdXN0b21pemUiOmZhbHNlLCJza2VldF9pbmRpY2F0b3JzLmVuYWJsZWQiOnRydWUsInNrZWV0X2luZGljYXRvcnMuaXRlbXMiOlsiUElORyIsIkRUIiwiT1NBQSIsIkRVQ0siLCJEQSIsIlNBRkUiLCJCT0RZIiwiTUQiLCJIQyIsIkZTIiwiQzQiXSwidmVsb2NpdHlfd2FybmluZy5jb2xvciI6IkMwQ0FGRkZGIiwidmVsb2NpdHlfd2FybmluZy5lbmFibGVkIjp0cnVlLCJ2ZWxvY2l0eV93YXJuaW5nOngiOjEwNDQuMCwidmVsb2NpdHlfd2FybmluZzp5IjozMjUuMCwid2F0ZXJtYXJrLmNvbF9hIjoiRkZGRkZGRkYiLCJ3YXRlcm1hcmsuY29sX2IiOiJGRkZGRkZGRiIsIndhdGVybWFyay5lZmZlY3RzIjpbIkdyYWRpZW50IiwiTWF0cml4Il0sIndhdGVybWFyay5mb250IjoiQ29uc29sZSIsIndhdGVybWFyay5yYWluYm93Ijp0cnVlLCJ3YXRlcm1hcmsudGV4dCI6IkdPRE1PREtJQkEiLCJ3YXRlcm1hcms6eCI6NzkuMCwid2F0ZXJtYXJrOnkiOjc1My4wfSwiTWlzYyI6eyJhc3BlY3RfcmF0aW8uZW5hYmxlZCI6dHJ1ZSwiYXNwZWN0X3JhdGlvLnByb3BvcnRpb24iOjEzMy4wLCJsb2dfZXZlbnRzLmNvbG9yX2hpdCI6IkMzQ0FGRkZGIiwibG9nX2V2ZW50cy5jb2xvcl9taXNzIjoiRkY5MjkyRkYiLCJsb2dfZXZlbnRzLmVuYWJsZWQiOnRydWUsImxvZ19ldmVudHMub3V0cHV0IjpbIkNvbnNvbGUiLCJEZWJ1ZyIsIk5vdGlmeSJdLCJub3RpZnlfb25fcm91bmRfc3RhcnQuZW5hYmxlZCI6dHJ1ZSwidW5sb2NrX2Zha2VfbGF0ZW5jeS5lbmFibGVkIjpmYWxzZSwidmlld21vZGVsLmVuYWJsZWQiOmZhbHNlLCJ2aWV3bW9kZWwuZm92Ijo2ODAuMCwidmlld21vZGVsLm9mZnNldF94IjoyNS4wLCJ2aWV3bW9kZWwub2Zmc2V0X3kiOjAuMCwidmlld21vZGVsLm9mZnNldF96IjotMTUuMH0sIk1vdmVtZW50Ijp7ImVkZ2Vfc3RvcC5lbmFibGVkIjpmYWxzZSwiZmFrZV9kdWNrLm9uX2ZyZWV6ZXRpbWUiOmZhbHNlLCJmYWtlX2R1Y2sudW5sb2NrX3NwZWVkIjpmYWxzZSwiZmFzdF9sYWRkZXIuZW5hYmxlZCI6dHJ1ZSwibm9fZmFsbF9kYW1hZ2UuZW5hYmxlZCI6ZmFsc2UsInN1cGVyX3Rvc3MuZW5hYmxlZCI6ZmFsc2V9LCJWaXN1YWxzIjp7ImFuaW1hdGlvbnMuZWFydGhxdWFrZSI6dHJ1ZSwiYW5pbWF0aW9ucy5lbmFibGVkIjp0cnVlLCJhbmltYXRpb25zLmluX2FpciI6Ikthbmdhcm9vIiwiYW5pbWF0aW9ucy5tb3ZlX2xlYW4iOjY2LjAsImFuaW1hdGlvbnMub25fZ3JvdW5kIjoiS2FuZ2Fyb28iLCJhbmltYXRpb25zLnBpdGNoX29uX2xhbmQiOmZhbHNlLCJhbmltYXRpb25zLnNsaWRpbmdfY3JvdWNoIjp0cnVlLCJhbmltYXRpb25zLnNsaWRpbmdfc2xvd3dhbGsiOmZhbHNlLCJoaXRfbWFya2VyLmNvbG9yIjoiMDBGRjZGRkYiLCJoaXRfbWFya2VyLmVuYWJsZWQiOnRydWUsImhpdF9tYXJrZXIuc2l6ZSI6My4wLCJoaXRfbWFya2VyLnRoaWNrbmVzcyI6Mi4wLCJoaXRfbWFya2VyLnR5cGUiOlsiV29ybGQiLCJTY3JlZW4iXSwia2VlcF9tb2RlbF90cmFuc3BhcmVuY3kuZW5hYmxlZCI6ZmFsc2UsIm5hZGVfcmFkaXVzLmVuYWJsZWQiOmZhbHNlLCJuYWRlX3JhZGl1cy5tb2xvdG92IjpmYWxzZSwibmFkZV9yYWRpdXMubW9sb3Rvdl9jb2xvciI6IkZGM0YzRkZGIiwibmFkZV9yYWRpdXMuc21va2UiOmZhbHNlLCJuYWRlX3JhZGl1cy5zbW9rZV9jb2xvciI6IjNEOTNGQUZGIiwic2NvcGVfb3ZlcmxheS5hZGRpdGlvbnMiOltdLCJzY29wZV9vdmVybGF5LmNvbG9yIjoiRkZGRkZGODAiLCJzY29wZV9vdmVybGF5LmVuYWJsZWQiOnRydWUsInNjb3BlX292ZXJsYXkuZXhjbHVkZV9saW5lcyI6W10sInNjb3BlX292ZXJsYXkuZ2FwIjo1LjAsInNjb3BlX292ZXJsYXkuc2l6ZSI6MTI5LjB9fQ==+IiwibWFudWFsX2Fycm93cy5zdHlsZSI6IlRlYW1Ta2VldCIsInNrZWV0X2luZGljYXRvcnMuQk9EWSI6IkJPRFkiLCJza2VldF9pbmRpY2F0b3JzLkRBIjoiREEiLCJza2VldF9pbmRpY2F0b3JzLkRUIjoiRFQiLCJza2VldF9pbmRpY2F0b3JzLkRVQ0siOiJEVUNLIiwic2tlZXRfaW5kaWNhdG9ycy5GUyI6IkZTIiwic2tlZXRfaW5kaWNhdG9ycy5IQyI6IkhDIiwic2tlZXRfaW5kaWNhdG9ycy5NRCI6Ik1EIiwic2tlZXRfaW5kaWNhdG9ycy5PU0FBIjoiT1NBQSIsInNrZWV0X2luZGljYXRvcnMuUElORyI6IlBJTkciLCJza2VldF9pbmRpY2F0b3JzLlNBRkUiOiJTQUZFIiwic2tlZXRfaW5kaWNhdG9ycy5jdXN0b21pemUiOmZhbHNlLCJza2VldF9pbmRpY2F0b3JzLmVuYWJsZWQiOmZhbHNlLCJza2VldF9pbmRpY2F0b3JzLml0ZW1zIjpbIlBJTkciLCJEVCIsIk9TQUEiLCJEVUNLIiwiREEiLCJTQUZFIiwiQk9EWSIsIk1EIiwiSEMiLCJGUyIsIkM0Il0sInZlbG9jaXR5X3dhcm5pbmcuY29sb3IiOiJDMENBRkZGRiIsInZlbG9jaXR5X3dhcm5pbmcuZW5hYmxlZCI6ZmFsc2UsInZlbG9jaXR5X3dhcm5pbmc6eCI6ODc2LjAsInZlbG9jaXR5X3dhcm5pbmc6eSI6MTYwLjAsIndhdGVybWFyay5jb2xfYSI6IkZGRkZGRkZGIiwid2F0ZXJtYXJrLmNvbF9iIjoiRkZGRkZGRkYiLCJ3YXRlcm1hcmsuZWZmZWN0cyI6W10sIndhdGVybWFyay5mb250IjoiRGVmYXVsdCIsIndhdGVybWFyay5yYWluYm93IjpmYWxzZSwid2F0ZXJtYXJrLnRleHQiOiJnYXpvbGluYSIsIndhdGVybWFyazp4Ijo4LjAsIndhdGVybWFyazp5Ijo1NDAuMH0sIk1pc2MiOnsiYXNwZWN0X3JhdGlvLmVuYWJsZWQiOmZhbHNlLCJhc3BlY3RfcmF0aW8ucHJvcG9ydGlvbiI6MC4wLCJsb2dfZXZlbnRzLmNvbG9yX2hpdCI6IkMzQ0FGRkZGIiwibG9nX2V2ZW50cy5jb2xvcl9taXNzIjoiRkY5MjkyRkYiLCJsb2dfZXZlbnRzLmVuYWJsZWQiOmZhbHNlLCJsb2dfZXZlbnRzLm91dHB1dCI6W10sIm5vdGlmeV9vbl9yb3VuZF9zdGFydC5lbmFibGVkIjpmYWxzZSwidW5sb2NrX2Zha2VfbGF0ZW5jeS5lbmFibGVkIjpmYWxzZSwidmlld21vZGVsLmVuYWJsZWQiOmZhbHNlLCJ2aWV3bW9kZWwuZm92Ijo2ODAuMCwidmlld21vZGVsLm9mZnNldF94IjoyNS4wLCJ2aWV3bW9kZWwub2Zmc2V0X3kiOjAuMCwidmlld21vZGVsLm9mZnNldF96IjotMTUuMH0sIk1vdmVtZW50Ijp7ImVkZ2Vfc3RvcC5lbmFibGVkIjpmYWxzZSwiZmFrZV9kdWNrLm9uX2ZyZWV6ZXRpbWUiOmZhbHNlLCJmYWtlX2R1Y2sudW5sb2NrX3NwZWVkIjpmYWxzZSwiZmFzdF9sYWRkZXIuZW5hYmxlZCI6ZmFsc2UsIm5vX2ZhbGxfZGFtYWdlLmVuYWJsZWQiOmZhbHNlLCJzdXBlcl90b3NzLmVuYWJsZWQiOmZhbHNlfSwiVmlzdWFscyI6eyJhbmltYXRpb25zLmVhcnRocXVha2UiOmZhbHNlLCJhbmltYXRpb25zLmVuYWJsZWQiOmZhbHNlLCJhbmltYXRpb25zLmluX2FpciI6IkRpc2FibGVkIiwiYW5pbWF0aW9ucy5tb3ZlX2xlYW4iOjAuMCwiYW5pbWF0aW9ucy5vbl9ncm91bmQiOiJEaXNhYmxlZCIsImFuaW1hdGlvbnMucGl0Y2hfb25fbGFuZCI6ZmFsc2UsImFuaW1hdGlvbnMuc2xpZGluZ19jcm91Y2giOmZhbHNlLCJhbmltYXRpb25zLnNsaWRpbmdfc2xvd3dhbGsiOmZhbHNlLCJoaXRfbWFya2VyLmNvbG9yIjoiMDBGRkZGRkYiLCJoaXRfbWFya2VyLmVuYWJsZWQiOmZhbHNlLCJoaXRfbWFya2VyLnNpemUiOjUuMCwiaGl0X21hcmtlci50aGlja25lc3MiOjIuMCwiaGl0X21hcmtlci50eXBlIjpbXSwia2VlcF9tb2RlbF90cmFuc3BhcmVuY3kuZW5hYmxlZCI6ZmFsc2UsIm5hZGVfcmFkaXVzLmVuYWJsZWQiOmZhbHNlLCJuYWRlX3JhZGl1cy5tb2xvdG92IjpmYWxzZSwibmFkZV9yYWRpdXMubW9sb3Rvdl9jb2xvciI6IkZGM0YzRkZGIiwibmFkZV9yYWRpdXMuc21va2UiOmZhbHNlLCJuYWRlX3JhZGl1cy5zbW9rZV9jb2xvciI6IjNEOTNGQUZGIiwic2NvcGVfb3ZlcmxheS5hZGRpdGlvbnMiOltdLCJzY29wZV9vdmVybGF5LmNvbG9yIjoiRkZGRkZGODAiLCJzY29wZV9vdmVybGF5LmVuYWJsZWQiOmZhbHNlLCJzY29wZV9vdmVybGF5LmV4Y2x1ZGVfbGluZXMiOltdLCJzY29wZV9vdmVybGF5LmdhcCI6NS4wLCJzY29wZV9vdmVybGF5LnNpemUiOjUwLjB9fQ==");
+            v96 = function(v97)
+                -- upvalues: l_v86_0 (ref)
+                for v98 = #l_v86_0, 1, -1 do
+                    local v99 = l_v86_0[v98];
+                    if v99.name == v97 then
+                        return v99, v98;
+                    end;
+                end;
+                return nil, -1;
+            end;
+            local function v104()
+                -- upvalues: l_v86_0 (ref), l_v87_0 (ref)
+                local v100 = {};
+                for v101, v102 in pairs(l_v86_0) do
+                    local l_name_0 = v102.name;
+                    if l_v87_0[v101] then
+                        l_name_0 = string.format("* %s", l_name_0);
+                    end;
+                    table.insert(v100, l_name_0);
+                end;
+                if #v100 == 0 then
+                    return {
+                        [1] = "\aFFFFFF40Empty presets list..."
+                    };
+                else
+                    return v100;
+                end;
+            end;
+            local function v106(v105)
+                -- upvalues: l_v86_0 (ref)
+                return l_v86_0[v105];
+            end;
+            local function v111()
+                -- upvalues: l_v86_0 (ref), l_v87_0 (ref), l_v85_0 (ref), l_v83_0 (ref), v104 (ref)
+                l_v86_0 = {};
+                for _, v108 in pairs(l_v87_0) do
+                    table.insert(l_v86_0, v108);
+                end;
+                for _, v110 in pairs(l_v85_0) do
+                    table.insert(l_v86_0, v110);
+                end;
+                l_v83_0.list:update(v104());
+            end;
+            local function v117()
+                -- upvalues: l_v83_0 (ref), v96 (ref), v12 (ref), v16 (ref)
+                local v112 = l_v83_0.name:get();
+                if v112 == "" then
+                    return;
+                else
+                    local v113, _ = v96(v112);
+                    if v113 == nil or v113.data == nil then
+                        v12.error("Preset data is invalid!");
+                        return;
+                    else
+                        local v115, v116 = v16.decode(v113.data);
+                        data = v116;
+                        success = v115;
+                        if not success or data == nil then
+                            v12.error(data);
+                            return;
+                        else
+                            v115, v116 = v16.import(data);
+                            data = v116;
+                            success = v115;
+                            if not success then
+                                v12.error(data);
+                                return;
+                            else
+                                v12.success("Preset successfully loaded!");
+                                return;
+                            end;
+                        end;
+                    end;
+                end;
+            end;
+            local function v122()
+                -- upvalues: l_v83_0 (ref), v16 (ref), v12 (ref), v96 (ref), l_v85_0 (ref), l_v87_0 (ref), l_v84_0 (ref), v111 (ref)
+                local v118 = l_v83_0.name:get();
+                if v118 == "" then
+                    return;
+                else
+                    local v119, v120 = v16.encode(v16.export());
+                    data = v120;
+                    success = v119;
+                    if not success then
+                        v12.error(data);
+                        return;
+                    else
+                        v119 = {
+                            name = v118, 
+                            data = data
+                        };
+                        local v121;
+                        v120, v121 = v96(v118);
+                        if v120 == nil then
+                            v120 = v119;
+                            table.insert(l_v85_0, v119);
+                        end;
+                        if v121 ~= -1 and v121 <= #l_v87_0 then
+                            v12.error("Can't modify built-in preset!");
+                            return;
+                        else
+                            v120.data = data;
+                            db[l_v84_0] = l_v85_0;
+                            v111();
+                            v12.success("Preset successfully saved!");
+                            return;
+                        end;
+                    end;
+                end;
+            end;
+            local function v126()
+                -- upvalues: l_v83_0 (ref), v96 (ref), v12 (ref), l_v87_0 (ref), l_v85_0 (ref), l_v84_0 (ref), v111 (ref)
+                local v123 = l_v83_0.name:get();
+                if v123 == "" then
+                    return;
+                else
+                    local v124, v125 = v96(v123);
+                    if v124 == nil then
+                        v12.error("Preset not selected!");
+                        return;
+                    elseif v125 ~= -1 and v125 <= #l_v87_0 then
+                        v12.error("Can't delete built-in preset!");
+                        return;
+                    else
+                        table.remove(l_v85_0, v125 - #l_v87_0);
+                        db[l_v84_0] = l_v85_0;
+                        v111();
+                        v12.success("Preset successfully deleted!");
+                        return;
+                    end;
+                end;
+            end;
+            local function v131()
+                -- upvalues: v16 (ref), l_clipboard_0 (ref), v12 (ref)
+                local v127, v128 = v16.decode(l_clipboard_0.get());
+                if not v127 then
+                    v12.error(v128);
+                    return;
+                else
+                    local v129, v130 = v16.import(v128);
+                    v128 = v130;
+                    if not v129 then
+                        v12.error(v128);
+                        return;
+                    else
+                        v12.success("Preset successfully imported!");
+                        return;
+                    end;
+                end;
+            end;
+            local function v134()
+                -- upvalues: v16 (ref), v12 (ref), l_clipboard_0 (ref)
+                local v132, v133 = v16.encode(v16.export());
+                if not v132 then
+                    v12.error(v133);
+                    return;
+                else
+                    l_clipboard_0.set(v133);
+                    v12.success("Preset successfully exported!");
+                    return;
+                end;
+            end;
+            l_v83_0.list = v81.presets:list("##presets.list", {});
+            l_v83_0.name = v81.presets:input("Preset Name");
+            v81.presets:button(l_v59_0(v11.get("check"), 5), v117, false):tooltip("Load Preset");
+            v81.presets:button(l_v59_0(v8("\a{Link Active}", v11.get("floppy-disk")), 7), v122, true):tooltip("Save Preset");
+            v81.presets:button(l_v59_0(v8("\aFF5050FF", v11.get("trash-can")), 7), v126, true):tooltip("Delete Preset");
+            v81.presets:button(l_v59_0(v11.get("up-from-bracket"), 7), v134, true):tooltip("Export Preset");
+            v81.presets:button(l_v59_0(v11.get("down-to-bracket"), 7), v131, true):tooltip("Import Preset");
+            v111();
+            l_v83_0.list:set_callback(function(v135)
+                -- upvalues: v106 (ref), l_v83_0 (ref)
+                local v136 = v135:get();
+                if v136 == nil or v136 <= 0 then
+                    return;
+                else
+                    local v137 = v106(v136);
+                    if v137 == nil then
+                        return;
+                    else
+                        l_v83_0.name:set(v137.name);
+                        return;
+                    end;
+                end;
+            end, true);
+        end;
+    end;
+    v80 = {};
+    v81 = v11.get("shield");
+    v82 = {
+        selector = ui.create(v81, "##selector", v19), 
+        tweaks = ui.create(v81, "Tweaks", v53), 
+        hotkeys = ui.create(v81, "Hotkeys", v19), 
+        states = ui.create(v81, "States", v19), 
+        builder = ui.create(v81, "Builder", v53), 
+        defensive = ui.create(v81, "##defensive", v53)
+    };
+    v83 = {};
+    v84 = {
+        v8(l_v55_0(2), l_v65_0("gears"), l_v55_0(5), "Settings"), 
+        v8(l_v55_0(2), l_v65_0("layer-group"), l_v55_0(7), "Builder")
+    };
+    v83.list = v82.selector:list("##selector.list", v84);
+    do
+        local l_v84_1 = v84;
+        v85 = function(v139)
+            -- upvalues: l_v84_1 (ref)
+            local v140 = v139:get();
+            local v141 = {};
+            for v142 = 1, #l_v84_1 do
+                local v143 = l_v84_1[v142];
+                if v140 == v142 then
+                    v141[v142] = string.gsub(v143, "\a{Small Text}", "\a{Link Active}");
+                else
+                    v141[v142] = string.gsub(v143, "\a{Link Active}", "\a{Small Text}");
+                end;
+            end;
+            v139:update(v141);
+        end;
+        v83.list:set_callback(v85, true);
+    end;
+    v84 = {
+        avoid_backstab = {
+            enabled = v16.push("Anti-Aim", "avoid_backstab.enabled", v82.tweaks:switch(v8(l_v55_0(2), l_v65_0("knife-kitchen"), l_v55_0(6), "Avoid Backstab")))
+        }
+    };
+    v86 = {
+        enabled = v16.push("Anti-Aim", "allow_on_use.enabled", v82.tweaks:switch(v8(l_v55_0(2), l_v65_0("shield-exclamation"), l_v55_0(7), "Allow on Use")))
+    };
+    v87 = v86.enabled:create();
+    v86.yaw_base = v16.push("Anti-Aim", "allow_on_use.yaw_base", v87:combo("Yaw Base", {
+        [1] = "Local View", 
+        [2] = "At Target"
+    }));
+    local v144 = nil;
+    do
+        local l_v87_1 = v87;
+        local function v147(v146)
+            -- upvalues: l_v87_1 (ref)
+            l_v87_1:visibility(v146:get());
+        end;
+        v86.enabled:set_callback(v147, true);
+        v84.allow_on_use = v86;
+    end;
+    v87 = {
+        enabled = v16.push("Anti-Aim", "anti_bruteforce.enabled", v82.tweaks:switch(v8(l_v55_0(2), l_v65_0("repeat"), l_v55_0(7), "Anti-Bruteforce")))
+    };
+    v144 = v87.enabled:create();
+    v87.conditions = v16.push("Anti-Aim", "anti_bruteforce.conditions", v144:selectable("Conditions", {
+        [1] = "Standing", 
+        [2] = "Running", 
+        [3] = "Walking", 
+        [4] = "Crouching", 
+        [5] = "Sneaking", 
+        [6] = "In Air", 
+        [7] = "Air Crouch"
+    }));
+    v87.mode = v16.push("Anti-Aim", "anti_bruteforce.mode", v144:combo("Mode", {
+        [1] = "Increase", 
+        [2] = "Decrease", 
+        [3] = "Meta"
+    }));
+    v87.time = v16.push("Anti-Aim", "anti_bruteforce.time", v144:slider("Time", 0, 50, 30, 0.1, "s"));
+    local v148 = nil;
+    do
+        local l_v144_0 = v144;
+        local function v151(v150)
+            -- upvalues: l_v144_0 (ref)
+            l_v144_0:visibility(v150:get());
+        end;
+        v87.enabled:set_callback(v151, true);
+        v84.anti_bruteforce = v87;
+    end;
+    v144 = {
+        enabled = v16.push("Anti-Aim", "safe_head.enabled", v82.tweaks:switch(v8(" ", l_v65_0("face-head-bandage"), l_v55_0(5), " ", "Safe Head")))
+    };
+    v148 = v144.enabled:create();
+    v144.conditions = v16.push("Anti-Aim", "safe_head.conditions", v148:listable("##safe_head.conditions", {
+        [1] = "Standing", 
+        [2] = "Crouch", 
+        [3] = "Air Crouch", 
+        [4] = "Air Knife", 
+        [5] = "Air Taser", 
+        [6] = "Distance"
+    }));
+    local v152 = nil;
+    do
+        local l_v148_0 = v148;
+        local function v155(v154)
+            -- upvalues: l_v148_0 (ref)
+            l_v148_0:visibility(v154:get());
+        end;
+        v144.enabled:set_callback(v155, true);
+        v84.safe_head = v144;
+    end;
+    v148 = {};
+    local v156 = v82.tweaks:label(v8(l_v55_0(2), l_v65_0("ban", "\a{Small Text}"), l_v55_0(7), "Disablers")):create();
+    v148.on_warmup = v16.push("Anti-Aim", "disablers.on_warmup", v156:switch(v8(l_v55_0(2), l_v65_0("person-rifle"), l_v55_0(7), "On Warmup")));
+    v148.no_enemies = v16.push("Anti-Aim", "disablers.no_enemies", v156:switch(v8(l_v55_0(2), l_v65_0("users-slash"), l_v55_0(6), "No Enemies")));
+    v84.disablers = v148;
+    v80.tweaks = v84;
+    v85 = {};
+    v86 = {
+        enabled = v16.push("Anti-Aim", "freestanding.enabled", v82.hotkeys:switch("Freestanding"))
+    };
+    v87 = v86.enabled:create();
+    v86.disablers = v16.push("Anti-Aim", "freestanding.disablers", v87:selectable("Disablers", {
+        [1] = "Standing", 
+        [2] = "Running", 
+        [3] = "Walking", 
+        [4] = "Crouching", 
+        [5] = "Sneaking", 
+        [6] = "In Air", 
+        [7] = "Air Crouch"
+    }));
+    v85.freestanding = v86;
+    v85.manual_yaw = {
+        direction = v16.push("Anti-Aim", "manual_yaw.direction", v82.hotkeys:combo("Manual Yaw", {
+            [1] = "Disabled", 
+            [2] = "Left", 
+            [3] = "Right", 
+            [4] = "Backward", 
+            [5] = "Forward"
+        }))
+    };
+    v80.hotkeys = v85;
+    v86 = function()
+        -- upvalues: v80 (ref), v10 (ref)
+        local v157 = v80.builder.state:get();
+        local v158 = v80.builder.team:get();
+        for v159 = 1, #v10.teams do
+            local v160 = v10.teams[v159];
+            local v161 = v160 == v158;
+            for v162 = 1, #v10.states do
+                local v163 = v10.states[v162];
+                local v164 = v80.builder[v160][v163];
+                if v164 ~= nil then
+                    local v165 = v163 == v157;
+                    local v166 = v161 and v165;
+                    v164.enabled:visibility(v166);
+                    if not v164.enabled:get() then
+                        v166 = false;
+                    end;
+                    v164.yaw_offset:visibility(v166);
+                    v164.yaw_add:visibility(v166);
+                    v164.yaw_modifier:visibility(v166);
+                    v164.body_yaw:visibility(v166);
+                    v164.force_defensive:visibility(v166);
+                end;
+            end;
+        end;
+    end;
+    do
+        local l_v82_0, l_v83_1, l_v86_1, l_v144_1 = v82, v83, v86, v144;
+        v87 = function(v171, v172)
+            -- upvalues: v16 (ref), l_v82_0 (ref), l_v62_0 (ref), l_v86_1 (ref), v72 (ref), l_v59_0 (ref), v8 (ref), l_v65_0 (ref), l_v55_0 (ref)
+            local v173 = {};
+            local function v175(v174)
+                -- upvalues: v171 (ref), v172 (ref)
+                return v171 .. ":" .. v172 .. ":" .. v174;
+            end;
+            v173.enabled = v16.push("Anti-Aim", v175("enabled"), l_v82_0.builder:switch(l_v62_0("Allow " .. v172, v175("enabled")))):set_callback(l_v86_1);
+            v173.yaw_offset = v16.push("Anti-Aim", v175("yaw_offset"), l_v82_0.builder:slider(l_v62_0(v72("Yaw Offset"), v175("yaw_offset")), -180, 180, 0, nil, "\194\176"));
+            v173.yaw_add = v16.push("Anti-Aim", v175("yaw_add"), l_v82_0.builder:switch(l_v62_0(v72("Yaw Add"), v175("yaw_add"))));
+            local v176 = v173.yaw_add:create();
+            v173.yaw_left = v16.push("Anti-Aim", v175("yaw_left"), v176:slider(v72("Left Offset"), -180, 180, 0, nil, "\194\176"));
+            v173.yaw_right = v16.push("Anti-Aim", v175("yaw_right"), v176:slider(v72("Right Offset"), -180, 180, 0, nil, "\194\176"));
+            v173.delay_mode = v16.push("Anti-Aim", v175("delay_mode"), v176:combo("Mode", {
+                [1] = "Default", 
+                [2] = "Randomize", 
+                [3] = "Sequential"
+            }));
+            v173.delay_steps = v16.push("Anti-Aim", v175("delay_steps"), v176:slider("Steps", 1, 10, 2));
+            local v177 = {
+                [1] = "st", 
+                [2] = "nd", 
+                [3] = "rd"
+            };
+            local function v179(v178)
+                if v178 == 0 then
+                    return "Off";
+                else
+                    return v178 .. "t";
+                end;
+            end;
+            for v180 = 1, 10 do
+                local v181 = "delay_" .. v180;
+                local v182 = v177[v180] or "th";
+                v173[v181] = v16.push("Anti-Aim", v175(v181), v176:slider(string.format(v72("%i%s Delay"), v180, v182), 0, 16, 0, nil, v179));
+            end;
+            local function v186()
+                -- upvalues: v173 (ref)
+                for v183 = 1, v173.delay_steps:get() do
+                    local v184 = "delay_" .. v183;
+                    local v185 = math.random(0, 10);
+                    v173[v184]:set(v185);
+                end;
+            end;
+            v173.shuffle_delay = v176:button(l_v59_0(v8(l_v65_0("shuffle"), l_v55_0(2), "Shuffle"), 45), v186, true);
+            local function v191()
+                -- upvalues: v173 (ref)
+                local v187 = v173.yaw_add:get();
+                local v188 = v173.delay_mode:get();
+                local v189 = v173.delay_steps:get();
+                v173.yaw_left:visibility(v187);
+                v173.yaw_right:visibility(v187);
+                v173.delay_mode:visibility(v187);
+                v173.delay_steps:visibility(v187 and v188 == "Sequential");
+                for v190 = 1, 10 do
+                    v173["delay_" .. v190]:visibility(v187 and v188 == "Sequential" and v190 <= v189);
+                end;
+                if v188 ~= "Sequential" then
+                    v173.delay_1:visibility(v187 and (v188 == "Default" or v188 == "Randomize"));
+                    v173.delay_2:visibility(v187 and v188 == "Randomize");
+                end;
+                v173.shuffle_delay:visibility(v187 and v188 == "Sequential");
+            end;
+            v173.yaw_add:set_callback(v191);
+            v173.delay_mode:set_callback(v191);
+            v173.delay_steps:set_callback(v191);
+            v191();
+            v173.yaw_modifier = v16.push("Anti-Aim", v175("yaw_modifier"), l_v82_0.builder:combo(l_v62_0(v72("Yaw Modifier"), v175("yaw_modifier")), {
+                [1] = "Disabled", 
+                [2] = "Center", 
+                [3] = "Offset", 
+                [4] = "Random", 
+                [5] = "Spin", 
+                [6] = "3-Way", 
+                [7] = "5-Way"
+            }));
+            v177 = v173.yaw_modifier:create();
+            v173.modifier_mode = v16.push("Anti-Aim", v175("modifier_mode"), v177:combo("Mode", {
+                [1] = "Default", 
+                [2] = "Randomize", 
+                [3] = "Sequential"
+            }));
+            v173.modifier_offset = v16.push("Anti-Aim", v175("modifier_offset"), v177:slider(v72("Offset"), -180, 180, 0, nil, "\194\176"));
+            v173.modifier_steps = v16.push("Anti-Aim", v175("modifier_steps"), v177:slider("Steps", 1, 10, 2));
+            v179 = {
+                [1] = "st", 
+                [2] = "nd", 
+                [3] = "rd"
+            };
+            for v192 = 1, 10 do
+                local v193 = "modifier_" .. v192;
+                local v194 = v179[v192] or "th";
+                v173[v193] = v16.push("Anti-Aim", v175(v193), v177:slider(string.format(v72("%i%s Offset"), v192, v194), -180, 180, 0, nil, "\194\176"));
+            end;
+            v186 = function()
+                -- upvalues: v173 (ref)
+                for v195 = 1, v173.modifier_steps:get() do
+                    local v196 = "modifier_" .. v195;
+                    local v197 = math.random(-30, 30);
+                    v173[v196]:set(v197);
+                end;
+            end;
+            v173.shuffle_modifier = v177:button(l_v59_0(v8(l_v65_0("shuffle"), l_v55_0(2), "Shuffle"), 45), v186, true);
+            v191 = function()
+                -- upvalues: v173 (ref)
+                local v198 = v173.yaw_modifier:get();
+                local v199 = v173.modifier_mode:get();
+                local v200 = v173.modifier_steps:get();
+                v173.modifier_mode:visibility(v198 ~= "Disabled");
+                v173.modifier_offset:visibility(v198 ~= "Disabled" and v199 == "Default");
+                v173.modifier_steps:visibility(v198 ~= "Disabled" and v199 == "Sequential");
+                for v201 = 1, 10 do
+                    v173["modifier_" .. v201]:visibility(v198 ~= "Disabled" and v199 == "Sequential" and v201 <= v200);
+                end;
+                if v199 ~= "Sequential" then
+                    v173.modifier_1:visibility(v198 ~= "Disabled" and v199 == "Randomize");
+                    v173.modifier_2:visibility(v198 ~= "Disabled" and v199 == "Randomize");
+                end;
+                v173.shuffle_modifier:visibility(v198 ~= "Disabled" and v199 == "Sequential");
+            end;
+            v173.yaw_modifier:set_callback(v191);
+            v173.modifier_mode:set_callback(v191);
+            v173.modifier_steps:set_callback(v191);
+            v191();
+            v173.body_yaw = v16.push("Anti-Aim", v175("body_yaw"), l_v82_0.builder:switch(l_v62_0(v72("Body Yaw"), v175("body_yaw"))));
+            v179 = v173.body_yaw:create();
+            v173.body_mode = v16.push("Anti-Aim", v175("body_mode"), v179:combo("Body Mode", {
+                [1] = "Default", 
+                [2] = "Ticks", 
+                [3] = "Random"
+            }));
+            v173.body_ticks = v16.push("Anti-Aim", v175("body_ticks"), v179:slider(v72("Ticks"), 4, 16, 4, nil, "t"));
+            v173.limit_mode = v16.push("Anti-Aim", v175("limit_mode"), v179:combo("Limit Mode", {
+                [1] = "Default", 
+                [2] = "Switch", 
+                [3] = "Random"
+            }));
+            v173.left_limit = v16.push("Anti-Aim", v175("left_limit"), v179:slider(v72("Left Limit"), 0, 60, 60, nil, "\194\176"));
+            v173.right_limit = v16.push("Anti-Aim", v175("right_limit"), v179:slider(v72("Right Limit"), 0, 60, 60, nil, "\194\176"));
+            v173.limit_1 = v16.push("Anti-Aim", v175("limit_1"), v179:slider(v72("From"), 0, 60, 60, nil, "\194\176"));
+            v173.limit_2 = v16.push("Anti-Aim", v175("limit_2"), v179:slider(v72("To"), 0, 60, 60, nil, "\194\176"));
+            v186 = function()
+                -- upvalues: v173 (ref)
+                local v202 = v173.body_yaw:get();
+                local v203 = v173.body_mode:get();
+                local v204 = v173.limit_mode:get();
+                v173.body_mode:visibility(v202);
+                v173.body_ticks:visibility(v202 and (v203 == "Ticks" or v203 == "Random"));
+                v173.limit_mode:visibility(v202);
+                v173.left_limit:visibility(v202 and v204 == "Default");
+                v173.right_limit:visibility(v202 and v204 == "Default");
+                v173.limit_1:visibility(v202 and (v204 == "Switch" or v204 == "Random"));
+                v173.limit_2:visibility(v202 and (v204 == "Switch" or v204 == "Random"));
+            end;
+            v173.body_yaw:set_callback(v186);
+            v173.body_mode:set_callback(v186);
+            v173.limit_mode:set_callback(v186);
+            v186();
+            v173.force_defensive = v16.push("Anti-Aim", v175("force_defensive"), l_v82_0.defensive:switch(l_v62_0("Force Defensive", v175("force_defensive"))));
+            v186 = v173.force_defensive:create();
+            v173.choke_mode = v16.push("Anti-Aim", v175("choke_mode"), v186:combo("Mode", {
+                [1] = "Default", 
+                [2] = "Custom", 
+                [3] = "Randomize", 
+                [4] = "Sequential"
+            }));
+            v173.choke_steps = v16.push("Anti-Aim", v175("choke_steps"), v186:slider("Steps", 1, 10, 2));
+            v191 = {
+                [1] = "st", 
+                [2] = "nd", 
+                [3] = "rd"
+            };
+            local function v206(v205)
+                if v205 == 16 then
+                    return "Default";
+                else
+                    return v205 .. "t";
+                end;
+            end;
+            for v207 = 1, 10 do
+                local v208 = "choke_" .. v207;
+                local v209 = v191[v207] or "th";
+                v173[v208] = v16.push("Anti-Aim", v175(v208), v186:slider(string.format(v72("%i%s Choke"), v207, v209), 1, 22, 16, nil, v206));
+            end;
+            local _ = nil;
+            local function v215()
+                -- upvalues: v173 (ref)
+                local v211 = v173.force_defensive:get();
+                local v212 = v173.choke_mode:get();
+                local v213 = v173.choke_steps:get();
+                v173.choke_mode:visibility(v211);
+                v173.choke_steps:visibility(v211 and v212 == "Sequential");
+                for v214 = 1, 10 do
+                    v173["choke_" .. v214]:visibility(v211 and v212 == "Sequential" and v214 <= v213);
+                end;
+                if v212 ~= "Sequential" then
+                    v173.choke_1:visibility(v211 and (v212 == "Custom" or v212 == "Randomize"));
+                    v173.choke_2:visibility(v211 and v212 == "Randomize");
+                end;
+            end;
+            v173.force_defensive:set_callback(v215);
+            v173.choke_mode:set_callback(v215);
+            v173.choke_steps:set_callback(v215);
+            v215();
+            return v173;
+        end;
+        l_v144_1 = {
+            team = l_v82_0.states:combo(v8(l_v55_0(2), l_v65_0("user-pen"), l_v55_0(5), "Team"), v10.teams):set_callback(l_v86_1), 
+            state = l_v82_0.states:combo(v8(l_v55_0(2), l_v65_0("satellite"), l_v55_0(7), "State"), v10.states):set_callback(l_v86_1)
+        };
+        for v216 = 1, #v10.teams do
+            local v217 = v10.teams[v216];
+            local v218 = {};
+            for v219 = 1, #v10.states do
+                local v220 = v10.states[v219];
+                v218[v220] = v87(v217, v220);
+            end;
+            l_v144_1[v217] = v218;
+        end;
+        v148 = function(v221)
+            local v222 = {};
+            for v223, _ in pairs(v221) do
+                local v225 = v221[v223];
+                if v225 ~= nil and v225:type() ~= "button" then
+                    v222[v223] = v225:get();
+                end;
+            end;
+            return v222;
+        end;
+        v152 = function(v226, v227)
+            for v228, _ in pairs(v226) do
+                local v230 = v226[v228];
+                local v231 = v227[v228];
+                if v230 ~= nil and v230:type() ~= "button" and v231 ~= nil then
+                    v230:set(v231);
+                end;
+            end;
+        end;
+        do
+            local l_v148_1, l_v152_0 = v148, v152;
+            v156 = function()
+                -- upvalues: l_v144_1 (ref), l_v148_1 (ref), l_base64_0 (ref), l_clipboard_0 (ref), v12 (ref)
+                local v234 = l_v144_1.team:get();
+                local v235 = l_v144_1.state:get();
+                local v236 = l_v144_1[v234][v235];
+                if v236 == nil then
+                    return;
+                else
+                    local v237 = l_v148_1(v236);
+                    local l_status_2, l_result_2 = pcall(json.stringify, v237);
+                    v237 = l_result_2;
+                    success = l_status_2;
+                    if not success then
+                        return;
+                    else
+                        l_status_2, l_result_2 = pcall(l_base64_0.encode, v237);
+                        v237 = l_result_2;
+                        success = l_status_2;
+                        if not success then
+                            return;
+                        else
+                            l_clipboard_0.set(v237);
+                            v12.success("State successfully exported!");
+                            return;
+                        end;
+                    end;
+                end;
+            end;
+            local function v243()
+                -- upvalues: l_clipboard_0 (ref), l_base64_0 (ref), l_v144_1 (ref), l_v152_0 (ref), v12 (ref)
+                local l_status_3, l_result_3 = pcall(l_clipboard_0.get);
+                data = l_result_3;
+                success = l_status_3;
+                if not success then
+                    return;
+                else
+                    l_status_3, l_result_3 = pcall(l_base64_0.decode, data);
+                    data = l_result_3;
+                    success = l_status_3;
+                    if not success then
+                        return;
+                    else
+                        l_status_3, l_result_3 = pcall(json.parse, data);
+                        data = l_result_3;
+                        success = l_status_3;
+                        if not success then
+                            return;
+                        else
+                            l_status_3 = l_v144_1.team:get();
+                            l_result_3 = l_v144_1.state:get();
+                            local v242 = l_v144_1[l_status_3][l_result_3];
+                            if v242 == nil then
+                                return;
+                            else
+                                l_v152_0(v242, data);
+                                v12.success("State successfully imported!");
+                                return;
+                            end;
+                        end;
+                    end;
+                end;
+            end;
+            local function v249()
+                -- upvalues: l_v144_1 (ref), l_v148_1 (ref), l_v152_0 (ref), v12 (ref)
+                local v244 = l_v144_1.team:get();
+                local v245 = l_v144_1.state:get();
+                local v246 = l_v144_1[v244][v245];
+                if v246 == nil then
+                    return;
+                else
+                    local v247 = l_v148_1(v246);
+                    local v248 = l_v144_1[v244 == "Counter-Terrorist" and "Terrorist" or "Counter-Terrorist"][v245];
+                    if v248 == nil then
+                        return;
+                    else
+                        l_v152_0(v248, v247);
+                        v12.success("State successfully transfered to opposite team!");
+                        return;
+                    end;
+                end;
+            end;
+            local v250 = l_v144_1.state:create();
+            v250:button(l_v59_0(v8(l_v65_0("arrow-up-from-bracket"), l_v55_0(3), "Copy"), 5), v156, true);
+            v250:button(l_v59_0(v8(l_v65_0("arrow-down-to-bracket"), l_v55_0(3), "Paste"), 5), v243, true);
+            v250:button(l_v59_0(v8(l_v65_0("send-backward"), l_v55_0(3), "Send to another team"), 3), v249, true);
+            v80.builder = l_v144_1;
+        end;
+        l_v86_1();
+        v148 = nil;
+        v152 = function()
+            -- upvalues: l_v83_1 (ref), l_v82_0 (ref)
+            local v251 = l_v83_1.list:get();
+            l_v82_0.tweaks:visibility(v251 == 1);
+            l_v82_0.hotkeys:visibility(v251 == 1);
+            l_v82_0.states:visibility(v251 == 2);
+            l_v82_0.builder:visibility(v251 == 2);
+            l_v82_0.defensive:visibility(v251 == 2);
+        end;
+        v152();
+        l_v83_1.list:set_callback(v152);
+        l_play_0.antiaim = v80;
+    end;
+    v81 = {};
+    v82 = v11.get("scribble");
+    v83 = {
+        interface = ui.create(v82, "Interface", v53), 
+        misc = ui.create(v82, "Miscellaneous", v19), 
+        visuals = ui.create(v82, "Visuals", v53), 
+        movement = ui.create(v82, "Movement", v19)
+    };
+    v84 = {};
+    v85 = {
+        enabled = v16.push("Misc", "aspect_ratio.enabled", v83.misc:switch(v8(l_v55_0(2), l_v65_0("tv"), l_v55_0(6), "Aspect Ratio")))
+    };
+    v86 = v85.enabled:create();
+    v87 = {
+        [1] = "5:4", 
+        [2] = "4:3", 
+        [3] = "3:2", 
+        [4] = "16:10", 
+        [5] = "16:9"
+    };
+    v144 = {
+        ["5:4"] = 125, 
+        ["16:9"] = 177, 
+        ["16:10"] = 160, 
+        ["3:2"] = 150, 
+        ["4:3"] = 133
+    };
+    v148 = {};
+    for v252 = 1, #v87 do
+        local v253 = v87[v252];
+        v148[v144[v253]] = v253;
+    end;
+    do
+        local l_v85_1, l_v86_2, l_v87_2 = v85, v86, v87;
+        do
+            local l_v148_2 = v148;
+            v152 = function(v258)
+                -- upvalues: l_v148_2 (ref)
+                if v258 == 0 then
+                    return "Off";
+                else
+                    return l_v148_2[v258];
+                end;
+            end;
+            l_v85_1.proportion = v16.push("Misc", "aspect_ratio.proportion", l_v86_2:slider("Aspect Ratio", 0, 200, 0, 0.01, v152));
+            for v259 = 1, #l_v87_2 do
+                local v260 = l_v87_2[v259];
+                local v261 = v144[v260];
+                do
+                    local l_v261_0 = v261;
+                    local function v263()
+                        -- upvalues: l_v85_1 (ref), l_v261_0 (ref)
+                        l_v85_1.proportion:set(l_v261_0);
+                    end;
+                    l_v86_2:button(l_v59_0(v260, 3), v263, true);
+                end;
+            end;
+        end;
+        l_v87_2 = nil;
+        do
+            local l_l_v86_2_0 = l_v86_2;
+            v144 = function(v265)
+                -- upvalues: l_l_v86_2_0 (ref)
+                l_l_v86_2_0:visibility(v265:get());
+            end;
+            l_v85_1.enabled:set_callback(v144, true);
+            v84.aspect_ratio = l_v85_1;
+        end;
+        l_v86_2 = {
+            enabled = v16.push("Misc", "viewmodel.enabled", v83.misc:switch(v8(l_v55_0(1), " ", l_v65_0("hand"), l_v55_0(7), "Viewmodel")))
+        };
+        l_v87_2 = l_v86_2.enabled:create();
+        l_v86_2.fov = v16.push("Misc", "viewmodel.fov", l_v87_2:slider("Field of View", 0, 1000, 680, 0.1, "\194\176"));
+        l_v86_2.offset_x = v16.push("Misc", "viewmodel.offset_x", l_v87_2:slider("Offset X", -100, 100, 25, 0.1, "\194\176"));
+        l_v86_2.offset_y = v16.push("Misc", "viewmodel.offset_y", l_v87_2:slider("Offset Y", -100, 100, 0, 0.1, "\194\176"));
+        l_v86_2.offset_z = v16.push("Misc", "viewmodel.offset_z", l_v87_2:slider("Offset Z", -100, 100, -15, 0.1, "\194\176"));
+        v144 = function()
+            -- upvalues: l_v86_2 (ref)
+            l_v86_2.fov:reset();
+            l_v86_2.offset_x:reset();
+            l_v86_2.offset_y:reset();
+            l_v86_2.offset_z:reset();
+        end;
+        l_v87_2:button(l_v59_0(v8(l_v65_0("arrow-rotate-left", "\aFF5050FF"), l_v55_0(2), "Reset"), 48), v144, true);
+        v144 = nil;
+        do
+            local l_l_v87_2_0 = l_v87_2;
+            v148 = function(v267)
+                -- upvalues: l_l_v87_2_0 (ref)
+                l_l_v87_2_0:visibility(v267:get());
+            end;
+            l_v86_2.enabled:set_callback(v148, true);
+            v84.viewmodel = l_v86_2;
+        end;
+        l_v87_2 = {
+            enabled = v16.push("Misc", "log_events.enabled", v83.misc:switch(v8(l_v55_0(3), l_v65_0("calendar-lines-pen"), l_v55_0(4), " ", "Log Events")))
+        };
+        v144 = l_v87_2.enabled:create();
+        l_v87_2.output = v16.push("Misc", "log_events.output", v144:selectable("Output", {
+            [1] = "Console", 
+            [2] = "Debug", 
+            [3] = "Notify"
+        }));
+        l_v87_2.color_hit = v16.push("Misc", "log_events.color_hit", v144:color_picker("Hit Color", color(195, 202, 255, 255)));
+        l_v87_2.color_miss = v16.push("Misc", "log_events.color_miss", v144:color_picker("Miss Color", color(255, 146, 146, 255)));
+        v148 = nil;
+        v152 = function()
+            -- upvalues: l_v87_2 (ref)
+            local v268 = l_v87_2.enabled:get();
+            l_v87_2.output:visibility(v268);
+            if #l_v87_2.output:get() == 0 then
+                v268 = false;
+            end;
+            l_v87_2.color_hit:visibility(v268);
+            l_v87_2.color_miss:visibility(v268);
+        end;
+        l_v87_2.output:set_callback(v152);
+        l_v87_2.enabled:set_callback(v152);
+        v152();
+        v84.log_events = l_v87_2;
+        v84.unlock_fake_latency = {
+            enabled = v16.push("Misc", "unlock_fake_latency.enabled", v83.misc:switch(v8(l_v55_0(3), l_v65_0("satellite-dish"), l_v55_0(5), " ", "Unlock Fake Latency")))
+        };
+        v84.notify_on_round_start = {
+            enabled = v16.push("Misc", "notify_on_round_start.enabled", v83.misc:switch(v8(l_v55_0(3), l_v65_0("bell"), l_v55_0(7), "Notify on Round Start")))
+        };
+        v81.misc = v84;
+    end;
+    v85 = {};
+    v86 = {
+        label = v83.interface:label(v8(l_v55_0(3), l_v65_0("pen-to-square"), l_v55_0(6), "Watermark"))
+    };
+    v87 = v86.label:create();
+    v86.font = v16.push("Interface", "watermark.font", v87:combo("Font", {
+        [1] = "Default", 
+        [2] = "Small", 
+        [3] = "Console", 
+        [4] = "Bold"
+    }));
+    v86.text = v16.push("Interface", "watermark.text", v87:input("Text", v9.name));
+    v86.effects = v16.push("Interface", "watermark.effects", v87:selectable("Effects", {
+        [1] = "Gradient", 
+        [2] = "Matrix", 
+        [3] = "Pulse"
+    }));
+    v86.rainbow = v16.push("Interface", "watermark.rainbow", v87:switch("Rainbow"));
+    v86.col_a = v16.push("Interface", "watermark.col_a", v87:color_picker("Color", color(255, 255, 255, 255)));
+    v86.col_b = v16.push("Interface", "watermark.col_b", v87:color_picker("2nd Color", color(255, 255, 255, 255)));
+    do
+        local l_v86_3, l_v87_3, l_v144_2, l_v152_1 = v86, v87, v144, v152;
+        l_v144_2 = function()
+            -- upvalues: l_v86_3 (ref)
+            return {
+                font = l_v86_3.font:get(), 
+                text = l_v86_3.text:get(), 
+                effects = l_v86_3.effects:get(), 
+                rainbow = l_v86_3.rainbow:get(), 
+                col_a = l_v86_3.col_a:get():to_hex(), 
+                col_b = l_v86_3.col_b:get():to_hex()
+            };
+        end;
+        v148 = function(v273)
+            -- upvalues: l_v86_3 (ref)
+            l_v86_3.font:set(v273.font);
+            l_v86_3.text:set(v273.text);
+            l_v86_3.effects:set(v273.effects);
+            l_v86_3.rainbow:set(v273.rainbow);
+            l_v86_3.col_a:set(color(v273.col_a));
+            l_v86_3.col_b:set(color(v273.col_b));
+        end;
+        do
+            local l_l_v144_2_0, l_v148_3 = l_v144_2, v148;
+            l_v152_1 = function()
+                -- upvalues: l_l_v144_2_0 (ref), l_base64_0 (ref), l_clipboard_0 (ref), v12 (ref)
+                local v276 = l_l_v144_2_0();
+                local l_status_4, l_result_4 = pcall(json.stringify, v276);
+                v276 = l_result_4;
+                success = l_status_4;
+                if not success then
+                    return;
+                else
+                    l_status_4, l_result_4 = pcall(l_base64_0.encode, v276);
+                    v276 = l_result_4;
+                    success = l_status_4;
+                    if not success then
+                        return;
+                    else
+                        l_clipboard_0.set(v276);
+                        v12.success("Watermark settings successfully exported!");
+                        return;
+                    end;
+                end;
+            end;
+            v156 = function()
+                -- upvalues: l_clipboard_0 (ref), l_base64_0 (ref), l_v148_3 (ref), v12 (ref)
+                local l_status_5, l_result_5 = pcall(l_clipboard_0.get);
+                data = l_result_5;
+                success = l_status_5;
+                if not success then
+                    return;
+                else
+                    l_status_5, l_result_5 = pcall(l_base64_0.decode, data);
+                    data = l_result_5;
+                    success = l_status_5;
+                    if not success then
+                        return;
+                    else
+                        l_status_5, l_result_5 = pcall(json.parse, data);
+                        data = l_result_5;
+                        success = l_status_5;
+                        if not success then
+                            return;
+                        else
+                            l_v148_3(data);
+                            v12.success("Watermark settings successfully imported!");
+                            return;
+                        end;
+                    end;
+                end;
+            end;
+            l_v87_3:button(l_v59_0(v8(l_v65_0("arrow-up-from-bracket"), l_v55_0(3), "Copy"), 15), l_v152_1, true);
+            l_v87_3:button(l_v59_0(v8(l_v65_0("arrow-down-to-bracket"), l_v55_0(3), "Paste"), 15), v156, true);
+        end;
+        l_v144_2 = nil;
+        v148 = function(_)
+            -- upvalues: l_v86_3 (ref)
+            local v282 = l_v86_3.effects:get("Gradient");
+            local v283 = l_v86_3.rainbow:get();
+            l_v86_3.rainbow:visibility(v282);
+            l_v86_3.col_a:visibility(not v283);
+            l_v86_3.col_b:visibility(not v283 and v282);
+        end;
+        l_v86_3.rainbow:set_callback(v148);
+        l_v86_3.effects:set_callback(v148);
+        v148();
+        v85.watermark = l_v86_3;
+        l_v87_3 = {};
+        l_v144_2 = {
+            [1] = "PING", 
+            [2] = "DT", 
+            [3] = "OSAA", 
+            [4] = "DUCK", 
+            [5] = "DA", 
+            [6] = "SAFE", 
+            [7] = "BODY", 
+            [8] = "MD", 
+            [9] = "HC", 
+            [10] = "FS", 
+            [11] = "C4"
+        };
+        l_v87_3.enabled = v16.push("Interface", "skeet_indicators.enabled", v83.interface:switch(v8(" ", "\a{Link Active}", "G", "\aDEFAULT", "S", l_v55_0(6), "Indicators")));
+        v148 = l_v87_3.enabled:create();
+        l_v87_3.items = v16.push("Interface", "skeet_indicators.items", v148:selectable("Items", l_v144_2));
+        v76(l_v87_3.items);
+        l_v87_3.customize = v16.push("Interface", "skeet_indicators.customize", v148:switch("Customize"));
+        for v284 = 1, #l_v144_2 - 1 do
+            local v285 = l_v144_2[v284];
+            l_v87_3[v285] = v16.push("Interface", "skeet_indicators." .. v285, v148:input(v285, v285));
+        end;
+        l_v152_1 = nil;
+        do
+            local l_l_v144_2_1 = l_v144_2;
+            v156 = function()
+                -- upvalues: l_v87_3 (ref), l_l_v144_2_1 (ref)
+                local v287 = l_v87_3.enabled:get();
+                local v288 = l_v87_3.customize:get();
+                l_v87_3.items:visibility(v287);
+                l_v87_3.customize:visibility(v287);
+                for v289 = 1, #l_l_v144_2_1 - 1 do
+                    l_v87_3[l_l_v144_2_1[v289]]:visibility(v287 and v288);
+                end;
+            end;
+            l_v87_3.enabled:set_callback(v156);
+            l_v87_3.customize:set_callback(v156);
+            v156();
+            v85.skeet_indicators = l_v87_3;
+        end;
+        l_v144_2 = {
+            enabled = v16.push("Interface", "manual_arrows.enabled", v83.interface:switch(v8(l_v55_0(2), l_v65_0("location-arrow"), l_v55_0(8), "Manual Arrows")))
+        };
+        v148 = l_v144_2.enabled:create();
+        l_v144_2.style = v16.push("Interface", "manual_arrows.style", v148:combo("Style", {
+            [1] = "TeamSkeet", 
+            [2] = "Custom"
+        }));
+        l_v144_2.font = v16.push("Interface", "manual_arrows.font", v148:combo("Font", {
+            [1] = "Default", 
+            [2] = "Small", 
+            [3] = "Console", 
+            [4] = "Bold"
+        }));
+        l_v144_2.left = v16.push("Interface", "manual_arrows.left", v148:input("Left", "<"));
+        l_v144_2.right = v16.push("Interface", "manual_arrows.right", v148:input("Right", ">"));
+        l_v144_2.offset = v16.push("Interface", "manual_arrows.offset", v148:slider("Offset", 0, 200, 40, nil, "px"));
+        l_v144_2.color = v16.push("Interface", "manual_arrows.color", v148:color_picker("Color", color(192, 202, 255, 255)));
+        l_v152_1 = nil;
+        v156 = function()
+            -- upvalues: l_v144_2 (ref)
+            local v290 = l_v144_2.enabled:get();
+            local v291 = l_v144_2.style:get();
+            l_v144_2.style:visibility(v290);
+            l_v144_2.font:visibility(v290 and v291 == "Custom");
+            l_v144_2.left:visibility(v290 and v291 == "Custom");
+            l_v144_2.right:visibility(v290 and v291 == "Custom");
+            l_v144_2.offset:visibility(v290);
+            l_v144_2.color:visibility(v290);
+        end;
+        l_v144_2.enabled:set_callback(v156);
+        l_v144_2.style:set_callback(v156);
+        v156();
+        v85.manual_arrows = l_v144_2;
+        v148 = {
+            enabled = v16.push("Interface", "damage_indicator.enabled", v83.interface:switch(v8(l_v55_0(2), l_v65_0("hundred-points"), l_v55_0(7), "Damage Indicator")))
+        };
+        l_v152_1 = v148.enabled:create();
+        v148.font = v16.push("Interface", "damage_indicator.font", l_v152_1:combo("Font", {
+            [1] = "Default", 
+            [2] = "Small", 
+            [3] = "Console", 
+            [4] = "Bold"
+        }));
+        v148.color = v16.push("Interface", "damage_indicator.color", l_v152_1:color_picker("Color", color(255, 255, 255, 255)));
+        v156 = nil;
+        do
+            local l_l_v152_1_0 = l_v152_1;
+            local function v294(v293)
+                -- upvalues: l_l_v152_1_0 (ref)
+                l_l_v152_1_0:visibility(v293:get());
+            end;
+            v148.enabled:set_callback(v294, true);
+            v85.damage_indicator = v148;
+        end;
+        l_v152_1 = {
+            enabled = v16.push("Interface", "velocity_warning.enabled", v83.interface:switch(v8(l_v55_0(2), l_v65_0("chart-line"), l_v55_0(7), "Velocity Warning")))
+        };
+        l_v152_1.color = v16.push("Interface", "velocity_warning.color", l_v152_1.enabled:color_picker(color(192, 202, 255, 255)));
+        v156 = nil;
+        local function v296(v295)
+            -- upvalues: l_v152_1 (ref)
+            l_v152_1.color:visibility(v295:get());
+        end;
+        l_v152_1.enabled:set_callback(v296, true);
+        v85.velocity_warning = l_v152_1;
+        v81.interface = v85;
+    end;
+    v86 = {
+        no_fall_damage = {
+            enabled = v16.push("Movement", "no_fall_damage.enabled", v83.movement:switch(v8(l_v55_0(4), l_v65_0("person-arrow-up-from-line"), l_v55_0(5), "No Fall Damage")))
+        }, 
+        fast_ladder = {
+            enabled = v16.push("Movement", "fast_ladder.enabled", v83.movement:switch(v8(l_v55_0(3), l_v65_0("water-ladder"), l_v55_0(7), "Fast Ladder")))
+        }, 
+        super_toss = {
+            enabled = v16.push("Movement", "super_toss.enabled", v83.movement:switch(v8(l_v55_0(4), l_v65_0("bomb"), l_v55_0(7), "Super Toss")))
+        }, 
+        edge_stop = {
+            enabled = v16.push("Movement", "edge_stop.enabled", v83.movement:switch(v8(l_v55_0(3), l_v65_0("person-falling-burst"), l_v55_0(6), "Edge Stop")))
+        }
+    };
+    v156 = {};
+    local v297 = v83.movement:label(v8(l_v55_0(3), l_v65_0("duck", "\a{Small Text}"), l_v55_0(8), "Fake Duck")):create();
+    v156.unlock_speed = v16.push("Movement", "fake_duck.unlock_speed", v297:switch("Unlock Speed"));
+    v156.on_freezetime = v16.push("Movement", "fake_duck.on_freezetime", v297:switch("On Freezetime"));
+    v86.fake_duck = v156;
+    v81.movement = v86;
+    v87 = {};
+    v144 = {
+        enabled = v16.push("Visuals", "animations.enabled", v83.visuals:switch(v8(l_v55_0(2), l_v65_0("layer-group"), l_v55_0(7), "Animations")))
+    };
+    v148 = v144.enabled:create();
+    v152 = {
+        [1] = "Disabled", 
+        [2] = "Static", 
+        [3] = "Walking", 
+        [4] = "Jitter", 
+        [5] = "Kangaroo"
+    };
+    v144.on_ground = v16.push("Visuals", "animations.on_ground", v148:combo("On Ground", v152));
+    v144.in_air = v16.push("Visuals", "animations.in_air", v148:combo("In Air", v152));
+    v144.pitch_on_land = v16.push("Visuals", "animations.pitch_on_land", v148:switch("0 Pitch on Land"));
+    v144.sliding_slowwalk = v16.push("Visuals", "animations.sliding_slowwalk", v148:switch("Sliding Slow Walk"));
+    v144.sliding_crouch = v16.push("Visuals", "animations.sliding_crouch", v148:switch("Sliding Crouch"));
+    v144.earthquake = v16.push("Visuals", "animations.earthquake", v148:switch("Earthquake"));
+    v144.move_lean = v16.push("Visuals", "animations.move_lean", v148:slider("Move Lean", 0, 100, 0, nil, "%"));
+    v152 = nil;
+    do
+        local l_v148_4 = v148;
+        v156 = function(v299)
+            -- upvalues: l_v148_4 (ref)
+            l_v148_4:visibility(v299:get());
+        end;
+        v144.enabled:set_callback(v156, true);
+        v87.animations = v144;
+    end;
+    v148 = {
+        enabled = v16.push("Visuals", "scope_overlay.enabled", v83.visuals:switch(v8(l_v55_0(2), l_v65_0("crosshairs-simple"), l_v55_0(7), "Scope Overlay")))
+    };
+    v152 = v148.enabled:create();
+    v148.additions = v16.push("Visuals", "scope_overlay.additions", v152:selectable("Additions", {
+        [1] = "Inverted", 
+        [2] = "Rotated", 
+        [3] = "Animated", 
+        [4] = "Spread Dependency"
+    }));
+    v148.exclude_lines = v16.push("Visuals", "scope_overlay.exclude_lines", v152:selectable("Exclude Lines", {
+        [1] = "Left", 
+        [2] = "Right", 
+        [3] = "Top", 
+        [4] = "Bottom"
+    }));
+    v148.size = v16.push("Visuals", "scope_overlay.size", v152:slider("Size", 0, 300, 50, nil, "px"));
+    v148.gap = v16.push("Visuals", "scope_overlay.gap", v152:slider("Gap", 0, 300, 5, nil, "px"));
+    v148.color = v16.push("Visuals", "scope_overlay.color", v152:color_picker("Color", color(255, 255, 255, 128)));
+    v156 = nil;
+    do
+        local l_v152_2 = v152;
+        local function v302(v301)
+            -- upvalues: l_v152_2 (ref)
+            l_v152_2:visibility(v301:get());
+        end;
+        v148.enabled:set_callback(v302, true);
+        v87.scope_overlay = v148;
+    end;
+    v152 = {
+        enabled = v16.push("Visuals", "hit_marker.enabled", v83.visuals:switch(v8(l_v55_0(2), l_v65_0("crosshairs"), l_v55_0(7), "Hit Marker")))
+    };
+    v156 = v152.enabled:create();
+    v152.type = v16.push("Visuals", "hit_marker.type", v156:selectable("Type", {
+        [1] = "World", 
+        [2] = "Screen"
+    }));
+    v152.size = v16.push("Visuals", "hit_marker.size", v156:slider("Size", 2, 5, 5, nil, "px"));
+    v152.thickness = v16.push("Visuals", "hit_marker.thickness", v156:slider("Thickness", 1, 5, 2, nil, "px"));
+    v152.color = v16.push("Visuals", "hit_marker.color", v156:color_picker("Color", color(0, 255, 255, 255)));
+    local v303 = nil;
+    do
+        local l_v152_3 = v152;
+        v297 = function()
+            -- upvalues: l_v152_3 (ref)
+            local v305 = l_v152_3.enabled:get();
+            l_v152_3.type:visibility(v305);
+            if not l_v152_3.type:get("World") then
+                v305 = false;
+            end;
+            l_v152_3.size:visibility(v305);
+            l_v152_3.thickness:visibility(v305);
+            l_v152_3.color:visibility(v305);
+        end;
+        l_v152_3.enabled:set_callback(v297);
+        l_v152_3.type:set_callback(v297);
+        v297();
+        v87.hit_marker = l_v152_3;
+        v156 = {
+            enabled = v16.push("Visuals", "nade_radius.enabled", v83.visuals:switch(v8(l_v55_0(1), " ", l_v65_0("fire"), l_v55_0(6), " ", "Nade Radius")))
+        };
+        v303 = v156.enabled:create();
+        v156.molotov = v16.push("Visuals", "nade_radius.molotov", v303:switch("Molotov"));
+        v156.molotov_color = v16.push("Visuals", "nade_radius.molotov_color", v156.molotov:color_picker(color(255, 63, 63, 255)));
+        v156.smoke = v16.push("Visuals", "nade_radius.smoke", v303:switch("Smoke"));
+        v156.smoke_color = v16.push("Visuals", "nade_radius.smoke_color", v156.smoke:color_picker(color(61, 147, 250, 255)));
+        v297 = nil;
+        do
+            local l_v303_0 = v303;
+            local function v308(v307)
+                -- upvalues: l_v303_0 (ref)
+                l_v303_0:visibility(v307:get());
+            end;
+            v156.enabled:set_callback(v308, true);
+            v87.nade_radius = v156;
+        end;
+        v87.keep_model_transparency = {
+            enabled = v16.push("Visuals", "keep_model_transparency.enabled", v83.visuals:switch(v8(" ", l_v65_0("transporter-2"), l_v55_0(7), "Keep Transparency")))
+        };
+        v81.visuals = v87;
+    end;
+    l_play_0.features = v81;
+end;
+v19 = nil;
+v19 = {
+    is_moving = false, 
+    is_onground = false, 
+    is_crouched = false, 
+    sent_packets = 0, 
+    duck_amount = 0, 
+    velocity2d_sqr = 0, 
+    side = -1, 
+    desync_delta = 0
+};
+v53 = function(v309)
+    -- upvalues: v19 (ref)
+    local v310 = entity.get_local_player();
+    if v310 == nil then
+        return;
+    else
+        local l_m_fFlags_0 = v310.m_fFlags;
+        local l_m_vecVelocity_0 = v310.m_vecVelocity;
+        local l_m_flDuckAmount_0 = v310.m_flDuckAmount;
+        local v314 = bit.band(l_m_fFlags_0, 1) ~= 0;
+        local v315 = math.abs(v310.m_flPoseParameter[11] * 2 - 1);
+        local v316 = l_m_vecVelocity_0:length2dsqr();
+        v19.is_moving = v316 > 25;
+        v19.is_onground = v314;
+        if v309.choked_commands == 0 then
+            v19.sent_packets = v19.sent_packets + 1;
+            v19.is_crouched = l_m_flDuckAmount_0 > 0.5;
+            v19.duck_amount = l_m_flDuckAmount_0;
+            v19.desync_delta = v315;
+        end;
+        v19.velocity2d_sqr = v316;
+        if v309.sidemove ~= 0 then
+            v19.side = v309.sidemove < 0 and -1 or 1;
+        end;
+        return;
+    end;
+end;
+events.createmove(v53);
+v53 = nil;
+v53 = {};
+v55 = 4096;
+v59 = 0;
+v62 = {
+    breaking_lc = false, 
+    shift = false, 
+    old_origin = vector(), 
+    defensive = {
+        left = 0, 
+        max = 0, 
+        force = false
+    }, 
+    lagcompensation = {
+        teleport = false, 
+        distance = 0
+    }
+};
+do
+    local l_v55_1, l_v59_1, l_v62_1, l_v65_1 = v55, v59, v62, v65;
+    l_v65_1 = function(v321, v322)
+        -- upvalues: l_v55_1 (ref), l_v62_1 (ref)
+        local v323 = (v322 - v321):lengthsqr();
+        local v324 = l_v55_1 < v323;
+        l_v62_1.breaking_lc = v324;
+        l_v62_1.lagcompensation.distance = v323;
+        l_v62_1.lagcompensation.teleport = v324;
+    end;
+    local function v330(v325)
+        -- upvalues: l_v62_1 (ref), l_v65_1 (ref)
+        local l_old_origin_0 = l_v62_1.old_origin;
+        local l_m_vecOrigin_0 = v325.m_vecOrigin;
+        local v328 = v325:get_simulation_time();
+        local v329 = to_ticks(v328.current - v328.old);
+        if v329 < 0 or v329 > 0 and v329 <= 64 then
+            l_v65_1(l_old_origin_0, l_m_vecOrigin_0);
+        end;
+        l_v62_1.old_origin = l_m_vecOrigin_0;
+    end;
+    local function v334(v331)
+        -- upvalues: l_v59_1 (ref), l_v62_1 (ref)
+        local l_m_nTickBase_0 = v331.m_nTickBase;
+        if math.abs(l_m_nTickBase_0 - l_v59_1) > 64 then
+            l_v59_1 = 0;
+        end;
+        local v333 = 0;
+        if l_v59_1 < l_m_nTickBase_0 then
+            l_v59_1 = l_m_nTickBase_0;
+        elseif l_m_nTickBase_0 < l_v59_1 then
+            v333 = math.min(14, math.max(0, l_v59_1 - l_m_nTickBase_0 - 1));
+        end;
+        if v333 > 0 then
+            l_v62_1.breaking_lc = true;
+            l_v62_1.defensive.left = v333;
+            if l_v62_1.defensive.max == 0 then
+                l_v62_1.defensive.max = v333;
+            end;
+        else
+            l_v62_1.defensive.left = 0;
+            l_v62_1.defensive.max = 0;
+        end;
+    end;
+    v53.get = function()
+        -- upvalues: l_v62_1 (ref)
+        return l_v62_1;
+    end;
+    local function v337(_)
+        -- upvalues: v334 (ref)
+        local v336 = entity.get_local_player();
+        if v336 == nil then
+            return;
+        else
+            v334(v336);
+            return;
+        end;
+    end;
+    local function v339()
+        -- upvalues: v330 (ref)
+        local v338 = entity.get_local_player();
+        if v338 == nil then
+            return;
+        else
+            v330(v338);
+            return;
+        end;
+    end;
+    events.createmove(v337);
+    events.net_update_start(v339);
+end;
+v55 = nil;
+v55 = {};
+v59 = {};
+v62 = 0;
+do
+    local l_v59_2, l_v62_2, l_v65_2 = v59, v62, v65;
+    l_v65_2 = function(v343)
+        -- upvalues: l_v62_2 (ref), l_v59_2 (ref)
+        l_v62_2 = l_v62_2 + 1;
+        l_v59_2[l_v62_2] = v343;
+    end;
+    local function v345()
+        -- upvalues: l_v62_2 (ref), l_v59_2 (ref)
+        for v344 = 1, l_v62_2 do
+            l_v59_2[v344] = nil;
+        end;
+        l_v62_2 = 0;
+    end;
+    local function v346()
+        -- upvalues: v19 (ref), l_v65_2 (ref), v17 (ref)
+        if not v19.is_onground then
+            return;
+        elseif v19.is_moving then
+            l_v65_2("Running");
+            if v19.is_crouched then
+                return;
+            else
+                if v17.antiaim.misc.slow_walk:get() then
+                    l_v65_2("Walking");
+                end;
+                return;
+            end;
+        else
+            l_v65_2("Standing");
+            return;
+        end;
+    end;
+    local function v347()
+        -- upvalues: v19 (ref), l_v65_2 (ref)
+        if not v19.is_crouched then
+            return;
+        else
+            l_v65_2("Crouching");
+            if v19.is_moving then
+                l_v65_2("Sneaking");
+            end;
+            return;
+        end;
+    end;
+    local function v349(v348)
+        -- upvalues: v19 (ref), l_v65_2 (ref)
+        if v19.is_onground and not v348.in_jump then
+            return;
+        else
+            l_v65_2("In Air");
+            if v19.is_crouched then
+                l_v65_2("Air Crouch");
+            end;
+            return;
+        end;
+    end;
+    v55.get = function()
+        -- upvalues: l_v59_2 (ref)
+        return l_v59_2[#l_v59_2];
+    end;
+    local function v351(v350)
+        -- upvalues: v345 (ref), v346 (ref), v347 (ref), v349 (ref)
+        v345();
+        v346();
+        v347();
+        v349(v350);
+    end;
+    events.createmove(v351);
+end;
+v59 = nil;
+v59 = {
+    get = function()
+        local v352 = entity.get_local_player();
+        if v352 == nil then
+            return;
+        else
+            local l_m_iTeamNum_0 = v352.m_iTeamNum;
+            if l_m_iTeamNum_0 == 2 then
+                return "Terrorist";
+            elseif l_m_iTeamNum_0 == 3 then
+                return "Counter-Terrorist";
+            else
+                return;
+            end;
+        end;
+    end
+};
+v62 = nil;
+v62 = {};
+v65 = 0;
+local v354 = false;
+local v355 = 0;
+local function v359(v356, v357, v358)
+    return v356 + v358 * (v357 - v356);
+end;
+local v360 = {};
+local l_angles_0 = v17.antiaim.angles;
+local function v363(v362)
+    v362:override(nil);
+end;
+local function v365(v364, ...)
+    if ... == nil then
+        return;
+    else
+        v364:override(...);
+        return;
+    end;
+end;
+local v366 = {};
+v366.__index = v366;
+v366.clear = function(v367)
+    for v368 in pairs(v367) do
+        v367[v368] = nil;
+    end;
+end;
+do
+    local l_l_angles_0_0, l_v363_0, l_v365_0 = l_angles_0, v363, v365;
+    v366.unset = function(_)
+        -- upvalues: l_v363_0 (ref), l_l_angles_0_0 (ref)
+        l_v363_0(l_l_angles_0_0.extended_roll);
+        l_v363_0(l_l_angles_0_0.extended_pitch);
+        l_v363_0(l_l_angles_0_0.extended_angles);
+        l_v363_0(l_l_angles_0_0.body_freestanding);
+        l_v363_0(l_l_angles_0_0.disable_yaw_modifiers);
+        l_v363_0(l_l_angles_0_0.freestanding);
+        l_v363_0(l_l_angles_0_0.freestanding_body_yaw);
+        l_v363_0(l_l_angles_0_0.options);
+        l_v363_0(l_l_angles_0_0.right_limit);
+        l_v363_0(l_l_angles_0_0.left_limit);
+        l_v363_0(l_l_angles_0_0.inverter);
+        l_v363_0(l_l_angles_0_0.body_yaw);
+        l_v363_0(l_l_angles_0_0.modifier_offset);
+        l_v363_0(l_l_angles_0_0.yaw_modifier);
+        l_v363_0(l_l_angles_0_0.hidden);
+        l_v363_0(l_l_angles_0_0.avoid_backstab);
+        l_v363_0(l_l_angles_0_0.yaw_offset);
+        l_v363_0(l_l_angles_0_0.yaw_base);
+        l_v363_0(l_l_angles_0_0.yaw);
+        l_v363_0(l_l_angles_0_0.pitch);
+        l_v363_0(l_l_angles_0_0.enabled);
+    end;
+    v366.set = function(v373)
+        -- upvalues: l_v365_0 (ref), l_l_angles_0_0 (ref)
+        if v373.yaw_offset ~= nil then
+            v373.yaw_offset = math.normalize_yaw(v373.yaw_offset);
+        end;
+        if v373.modifier_offset ~= nil then
+            v373.modifier_offset = math.normalize_yaw(v373.modifier_offset);
+        end;
+        if v373.left_limit ~= nil then
+            v373.left_limit = math.clamp(v373.left_limit, 0, 60);
+        end;
+        if v373.right_limit ~= nil then
+            v373.right_limit = math.clamp(v373.right_limit, 0, 60);
+        end;
+        if v373.extended_pitch ~= nil then
+            v373.extended_pitch = math.normalize_yaw(v373.extended_pitch);
+        end;
+        if v373.extended_roll ~= nil then
+            v373.extended_roll = math.clamp(v373.extended_roll, -90, 90);
+        end;
+        l_v365_0(l_l_angles_0_0.enabled, v373.enabled);
+        l_v365_0(l_l_angles_0_0.pitch, v373.pitch);
+        l_v365_0(l_l_angles_0_0.yaw, v373.yaw);
+        l_v365_0(l_l_angles_0_0.yaw_base, v373.yaw_base);
+        l_v365_0(l_l_angles_0_0.yaw_offset, v373.yaw_offset);
+        l_v365_0(l_l_angles_0_0.avoid_backstab, v373.avoid_backstab);
+        l_v365_0(l_l_angles_0_0.hidden, v373.hidden);
+        l_v365_0(l_l_angles_0_0.yaw_modifier, v373.yaw_modifier);
+        l_v365_0(l_l_angles_0_0.modifier_offset, v373.modifier_offset);
+        l_v365_0(l_l_angles_0_0.body_yaw, v373.body_yaw);
+        l_v365_0(l_l_angles_0_0.inverter, v373.inverter);
+        l_v365_0(l_l_angles_0_0.left_limit, v373.left_limit);
+        l_v365_0(l_l_angles_0_0.right_limit, v373.right_limit);
+        l_v365_0(l_l_angles_0_0.options, v373.options);
+        l_v365_0(l_l_angles_0_0.freestanding_body_yaw, v373.freestanding_body_yaw);
+        l_v365_0(l_l_angles_0_0.freestanding, v373.freestanding);
+        l_v365_0(l_l_angles_0_0.disable_yaw_modifiers, v373.disable_yaw_modifiers);
+        l_v365_0(l_l_angles_0_0.body_freestanding, v373.body_freestanding);
+        l_v365_0(l_l_angles_0_0.extended_angles, v373.extended_angles);
+        l_v365_0(l_l_angles_0_0.extended_pitch, v373.extended_pitch);
+        l_v365_0(l_l_angles_0_0.extended_roll, v373.extended_roll);
+    end;
+    setmetatable(v360, v366);
+    v62.buffer = v360;
+end;
+l_angles_0 = {};
+v363 = l_play_0.antiaim.builder;
+do
+    local l_v65_3, l_v354_0, l_v355_0, l_v360_0, l_l_angles_0_1, l_v363_1, l_v365_1 = v65, v354, v355, v360, l_angles_0, v363, v365;
+    l_v365_1 = function(_)
+        -- upvalues: l_v360_0 (ref)
+        l_v360_0.pitch = "Down";
+    end;
+    v366 = function(v382)
+        -- upvalues: l_v360_0 (ref)
+        l_v360_0.yaw = "Backward";
+        l_v360_0.yaw_base = "At Target";
+        l_v360_0.yaw_offset = v382.yaw_offset:get();
+        l_v360_0.yaw_add = v382.yaw_add:get();
+        l_v360_0.yaw_left = v382.yaw_left:get();
+        l_v360_0.yaw_right = v382.yaw_right:get();
+        l_v360_0.delay_mode = v382.delay_mode:get();
+        l_v360_0.delay_steps = v382.delay_steps:get();
+        for v383 = 1, 10 do
+            local v384 = "delay_" .. v383;
+            l_v360_0[v384] = v382[v384]:get();
+        end;
+    end;
+    local function v388(v385)
+        -- upvalues: l_v360_0 (ref)
+        l_v360_0.yaw_modifier = v385.yaw_modifier:get();
+        l_v360_0.modifier_mode = v385.modifier_mode:get();
+        l_v360_0.modifier_offset = v385.modifier_offset:get();
+        l_v360_0.modifier_steps = v385.modifier_steps:get();
+        for v386 = 1, 10 do
+            local v387 = "modifier_" .. v386;
+            l_v360_0[v387] = v385[v387]:get();
+        end;
+    end;
+    local function v390(v389)
+        -- upvalues: l_v360_0 (ref)
+        l_v360_0.body_yaw = v389.body_yaw:get();
+        l_v360_0.inverter = false;
+        l_v360_0.body_mode = v389.body_mode:get();
+        l_v360_0.body_ticks = v389.body_ticks:get();
+        l_v360_0.limit_mode = v389.limit_mode:get();
+        l_v360_0.left_limit = v389.left_limit:get();
+        l_v360_0.right_limit = v389.right_limit:get();
+        l_v360_0.limit_1 = v389.limit_1:get();
+        l_v360_0.limit_2 = v389.limit_2:get();
+        l_v360_0.options = {};
+        l_v360_0.freestanding_body_yaw = "Off";
+    end;
+    local function v392(_)
+        -- upvalues: l_v360_0 (ref)
+        l_v360_0.freestanding = false;
+    end;
+    local function v394(_)
+        -- upvalues: l_v360_0 (ref)
+        l_v360_0.extended_angles = false;
+        l_v360_0.extended_pitch = 0;
+        l_v360_0.extended_roll = 0;
+    end;
+    local function v398(v395)
+        -- upvalues: l_v360_0 (ref)
+        l_v360_0.force_defensive = v395.force_defensive:get();
+        l_v360_0.choke_mode = v395.choke_mode:get();
+        l_v360_0.choke_steps = v395.choke_steps:get();
+        for v396 = 1, 10 do
+            local v397 = "choke_" .. v396;
+            l_v360_0[v397] = v395[v397]:get();
+        end;
+    end;
+    do
+        local l_l_v363_1_0, l_l_v365_1_0, l_v366_0, l_v388_0, l_v390_0, l_v392_0, l_v394_0, l_v398_0 = l_v363_1, l_v365_1, v366, v388, v390, v392, v394, v398;
+        l_l_angles_0_1.get = function(_, v408, v409)
+            -- upvalues: l_l_v363_1_0 (ref)
+            return l_l_v363_1_0[v408][v409];
+        end;
+        l_l_angles_0_1.is_active_ex = function(_, v411)
+            if v411 == nil then
+                return false;
+            else
+                return true;
+            end;
+        end;
+        l_l_angles_0_1.is_active = function(v412, v413, v414)
+            local v415 = v412:get(v413, v414);
+            if v415 == nil then
+                return false;
+            else
+                return v412:is_active_ex(v415);
+            end;
+        end;
+        l_l_angles_0_1.apply_ex = function(_, v417)
+            -- upvalues: l_v360_0 (ref), l_l_v365_1_0 (ref), l_v366_0 (ref), l_v388_0 (ref), l_v390_0 (ref), l_v392_0 (ref), l_v394_0 (ref), l_v398_0 (ref)
+            if v417 == nil then
+                return false;
+            else
+                l_v360_0.enabled = v417.enabled:get();
+                l_l_v365_1_0(v417);
+                l_v366_0(v417);
+                l_v388_0(v417);
+                l_v390_0(v417);
+                l_v392_0(v417);
+                l_v394_0(v417);
+                l_v398_0(v417);
+                return true;
+            end;
+        end;
+        l_l_angles_0_1.apply = function(v418, v419, v420)
+            local v421 = v418:get(v419, v420);
+            if v421 == nil then
+                return false, nil;
+            elseif not v418:is_active_ex(v421) then
+                return false, v421;
+            else
+                v418:apply_ex(v421);
+                return true, v421;
+            end;
+        end;
+        l_l_angles_0_1.update = function(v422)
+            -- upvalues: v55 (ref), v59 (ref), l_play_0 (ref)
+            local v423 = v55.get();
+            local v424 = v59.get();
+            if v423 == nil or v424 == nil then
+                return false, nil;
+            else
+                if l_play_0.antiaim.hotkeys.manual_yaw.direction:get() ~= "Disabled" then
+                    local v425, v426 = v422:apply(v424, "Manual Yaw");
+                    if v425 and v426 ~= nil then
+                        return v425, v426;
+                    end;
+                end;
+                if l_play_0.antiaim.hotkeys.freestanding.enabled:get() then
+                    local v427, v428 = v422:apply(v424, "Freestanding");
+                    if v427 and v428 ~= nil then
+                        return v427, v428;
+                    end;
+                end;
+                local _, v430 = v422:apply(v424, v423);
+                return true, v430;
+            end;
+        end;
+    end;
+    l_v363_1 = {};
+    l_v365_1 = l_play_0.antiaim.tweaks.avoid_backstab;
+    do
+        local l_l_v365_1_1 = l_v365_1;
+        l_v363_1.update = function(_)
+            -- upvalues: l_v360_0 (ref), l_l_v365_1_1 (ref)
+            l_v360_0.avoid_backstab = l_l_v365_1_1.enabled:get();
+        end;
+    end;
+    l_v365_1 = {};
+    v366 = l_play_0.antiaim.tweaks.allow_on_use;
+    v388 = false;
+    do
+        local l_v366_1, l_v388_1, l_v390_1 = v366, v388, v390;
+        l_v390_1 = function(v436)
+            -- upvalues: l_v366_1 (ref), l_v388_1 (ref)
+            if not l_v366_1.enabled:get() then
+                return false;
+            else
+                local v437 = entity.get_local_player();
+                if v437 == nil then
+                    return false;
+                else
+                    local v438 = v437:get_player_weapon();
+                    if v438 == nil then
+                        return false;
+                    else
+                        local v439 = v438:get_weapon_info();
+                        if v439 == nil then
+                            return false;
+                        else
+                            local l_m_iTeamNum_1 = v437.m_iTeamNum;
+                            local v441 = v437:get_origin();
+                            local v442 = v439.idx == 49;
+                            local l_m_bIsDefusing_0 = v437.m_bIsDefusing;
+                            local l_m_bIsGrabbingHostage_0 = v437.m_bIsGrabbingHostage;
+                            local l_m_bInBombZone_0 = v437.m_bInBombZone;
+                            if l_m_bIsDefusing_0 or l_m_bIsGrabbingHostage_0 then
+                                return false;
+                            elseif l_m_bInBombZone_0 and v442 then
+                                return false;
+                            else
+                                if l_m_iTeamNum_1 == 3 and v436.view_angles.x > 25 then
+                                    local v446 = entity.get_entities("CPlantedC4");
+                                    for v447 = 1, #v446 do
+                                        if (v446[v447]:get_origin() - v441):lengthsqr() < 3844 then
+                                            return false;
+                                        end;
+                                    end;
+                                end;
+                                local v448 = render.camera_angles();
+                                local v449 = vector():angles(v448);
+                                local v450 = v437:get_eye_position();
+                                local v451 = v450 + v449 * 128;
+                                local v452 = utils.trace_line(v450, v451, v437);
+                                if v452.fraction ~= 1 then
+                                    local v453 = v452.entity:get_classname();
+                                    if v453 == "CWorld" then
+                                        return true;
+                                    elseif v453 == "CFuncBrush" then
+                                        return true;
+                                    elseif v453 == "CCSPlayer" then
+                                        return true;
+                                    elseif v453 == "CHostage" and v450:distsqr((ent:get_origin())) < 7056 then
+                                        return false;
+                                    elseif not l_v388_1 then
+                                        l_v388_1 = true;
+                                        return false;
+                                    end;
+                                end;
+                                return true;
+                            end;
+                        end;
+                    end;
+                end;
+            end;
+        end;
+        l_v365_1.update = function(_, v455)
+            -- upvalues: l_v388_1 (ref), l_v390_1 (ref), l_v360_0 (ref), l_v366_1 (ref)
+            if v455.in_use == false then
+                l_v388_1 = false;
+                return false;
+            elseif not l_v390_1(v455) then
+                return false;
+            else
+                l_v360_0.pitch = "Disabled";
+                l_v360_0.yaw_base = l_v366_1.yaw_base:get();
+                l_v360_0.yaw_offset = l_v360_0.yaw_offset + 180;
+                l_v360_0.freestanding = false;
+                v455.in_use = false;
+                return true;
+            end;
+        end;
+    end;
+    v366 = {};
+    v388 = l_play_0.antiaim.tweaks.anti_bruteforce;
+    v390 = 0;
+    v392 = 0;
+    v394 = 0;
+    v398 = 0;
+    do
+        local l_v388_2, l_v392_1, l_v394_1, l_v398_1 = v388, v392, v394, v398;
+        local function v461()
+            -- upvalues: v55 (ref), l_v388_2 (ref)
+            local v460 = v55.get();
+            if v460 == nil then
+                return false;
+            else
+                return l_v388_2.conditions:get(v460);
+            end;
+        end;
+        local function v467(v462)
+            -- upvalues: l_v392_1 (ref), l_v388_2 (ref), l_v398_1 (ref), l_v394_1 (ref)
+            if l_v392_1 == globals.tickcount then
+                return;
+            else
+                local v463 = entity.get_local_player();
+                if v463 == nil or not v463:is_alive() then
+                    return;
+                else
+                    local v464 = entity.get(v462.userid, true);
+                    if v464 == nil or not v464:is_enemy() then
+                        return;
+                    else
+                        local v465 = v463:get_eye_position();
+                        if (v465:closest_ray_point(v464:get_eye_position(), (vector(v462.x, v462.y, v462.z))) - v465):lengthsqr() > 5625 then
+                            return;
+                        else
+                            local v466 = l_v388_2.mode:get();
+                            if v466 == "Increase" then
+                                l_v398_1 = math.random(5, 10);
+                            end;
+                            if v466 == "Decrease" then
+                                l_v398_1 = math.random(-5, -10);
+                            end;
+                            if v466 == "Meta" then
+                                l_v398_1 = math.random(0, 1) == 1 and math.random(-5, -10) or math.random(5, 10);
+                            end;
+                            l_v394_1 = l_v388_2.time:get() * 0.1;
+                            events.bruteforce:call({
+                                attacker = v464, 
+                                offset = l_v398_1, 
+                                time = l_v394_1
+                            });
+                            l_v392_1 = globals.tickcount;
+                            return;
+                        end;
+                    end;
+                end;
+            end;
+        end;
+        local function v470()
+            -- upvalues: v461 (ref), l_v394_1 (ref), l_v360_0 (ref), l_v398_1 (ref)
+            if not v461() then
+                return;
+            else
+                local l_frametime_0 = globals.frametime;
+                local v469 = l_v394_1 > 0;
+                if v469 then
+                    l_v394_1 = l_v394_1 - l_frametime_0;
+                end;
+                if v469 then
+                    l_v360_0.yaw_offset = l_v360_0.yaw_offset - l_v398_1;
+                end;
+                return;
+            end;
+        end;
+        local _ = nil;
+        local function v474(v472)
+            -- upvalues: v470 (ref), v467 (ref)
+            local v473 = v472:get();
+            events.createmove(v470, v473);
+            events.bullet_impact(v467, v473);
+        end;
+        l_v388_2.enabled:set_callback(v474, true);
+    end;
+    v388 = {};
+    v390 = l_play_0.antiaim.tweaks.safe_head;
+    v392 = 1000000;
+    do
+        local l_v390_2, l_v392_2, l_v394_2, l_v398_2 = v390, v392, v394, v398;
+        l_v394_2 = function(v479, v480)
+            -- upvalues: v19 (ref), l_v392_2 (ref)
+            local v481 = v479:get_player_weapon();
+            if v481 == nil then
+                return nil;
+            else
+                local v482 = v481:get_classname();
+                local v483 = v482 == "CKnife";
+                local v484 = v482 == "CWeaponTaser";
+                local v485 = v479:get_origin();
+                local v486 = v480:get_origin() - v485;
+                local v487 = -v486.z;
+                local v488 = v486:length2dsqr();
+                if v19.is_onground then
+                    if (not v19.is_moving or v19.is_crouched) and v487 >= 10 and l_v392_2 < v488 then
+                        return "Distance";
+                    else
+                        if v19.is_crouched then
+                            if v487 >= 48 then
+                                return "Crouching";
+                            end;
+                        elseif not v19.is_moving and v487 >= 24 then
+                            return "Standing";
+                        end;
+                        return nil;
+                    end;
+                else
+                    if v19.is_crouched then
+                        if v484 and v487 > -20 and v488 < 250000 then
+                            return "Air Taser";
+                        elseif v483 and v487 > -100 then
+                            return "Air Knife";
+                        elseif v487 > 130 then
+                            return "Air Crouch";
+                        end;
+                    end;
+                    return nil;
+                end;
+            end;
+        end;
+        l_v398_2 = function()
+            -- upvalues: l_v390_2 (ref), l_v394_2 (ref)
+            if not l_v390_2.enabled:get() then
+                return false;
+            else
+                local v489 = entity.get_local_player();
+                if v489 == nil then
+                    return false;
+                else
+                    local v490 = entity.get_threat();
+                    if v490 == nil then
+                        return false;
+                    else
+                        local v491 = l_v394_2(v489, v490);
+                        if v491 == nil then
+                            return false;
+                        else
+                            return l_v390_2.conditions:get(v491);
+                        end;
+                    end;
+                end;
+            end;
+        end;
+        v388.update = function(_)
+            -- upvalues: l_v398_2 (ref), l_v360_0 (ref)
+            if not l_v398_2() then
+                return false;
+            else
+                l_v360_0.enabled = true;
+                l_v360_0.pitch = "Down";
+                l_v360_0.yaw = "Backward";
+                l_v360_0.yaw_base = "At Target";
+                l_v360_0.yaw_offset = 0;
+                l_v360_0.yaw_add = false;
+                l_v360_0.yaw_modifier = "Disabled";
+                l_v360_0.body_yaw = false;
+                l_v360_0.freestanding = false;
+                return true;
+            end;
+        end;
+    end;
+    v390 = {};
+    v392 = l_play_0.antiaim.tweaks.disablers;
+    v394 = function()
+        local v493 = entity.get_game_rules();
+        if v493 == nil then
+            return false;
+        else
+            return v493.m_bWarmupPeriod;
+        end;
+    end;
+    v398 = function()
+        local v494 = false;
+        local v495 = entity.get_player_resource();
+        for v496 = 1, globals.max_players do
+            local v497 = entity.get(v496);
+            if v497 ~= nil and v495.m_bConnected[v496] and v497:is_enemy() and v497:is_alive() then
+                v494 = true;
+            end;
+        end;
+        return v494;
+    end;
+    do
+        local l_v392_3, l_v394_3, l_v398_3 = v392, v394, v398;
+        local function v501()
+            -- upvalues: l_v392_3 (ref), l_v394_3 (ref), l_v398_3 (ref)
+            if l_v392_3.on_warmup:get() and l_v394_3() then
+                return true;
+            elseif l_v392_3.no_enemies:get() and not l_v398_3() then
+                return true;
+            else
+                return false;
+            end;
+        end;
+        v390.update = function(_)
+            -- upvalues: v501 (ref), l_v360_0 (ref)
+            if not v501() then
+                return false;
+            else
+                l_v360_0.enabled = true;
+                l_v360_0.pitch = "Disabled";
+                l_v360_0.yaw = "Backward";
+                l_v360_0.yaw_base = "At Target";
+                l_v360_0.yaw_offset = globals.tickcount * 8;
+                l_v360_0.yaw_add = false;
+                l_v360_0.yaw_modifier = "Disabled";
+                l_v360_0.body_yaw = false;
+                l_v360_0.freestanding = false;
+                return true;
+            end;
+        end;
+    end;
+    v392 = {};
+    v394 = l_play_0.antiaim.hotkeys.freestanding;
+    do
+        local l_v394_4, l_v398_4 = v394, v398;
+        l_v398_4 = function()
+            -- upvalues: v55 (ref), l_v394_4 (ref)
+            local v505 = v55.get();
+            if v505 == nil then
+                return false;
+            else
+                return l_v394_4.disablers:get(v505);
+            end;
+        end;
+        v392.update = function(_)
+            -- upvalues: l_v394_4 (ref), l_v398_4 (ref), l_v360_0 (ref)
+            if not l_v394_4.enabled:get() then
+                return false;
+            elseif l_v398_4() then
+                return false;
+            else
+                l_v360_0.yaw_base = "Local View";
+                l_v360_0.freestanding = true;
+                return true;
+            end;
+        end;
+    end;
+    v394 = {};
+    v398 = l_play_0.antiaim.hotkeys.manual_yaw;
+    local v507 = {
+        Left = -90, 
+        Forward = 180, 
+        Backward = 0, 
+        Right = 90
+    };
+    do
+        local l_v398_5, l_v507_0 = v398, v507;
+        v394.update = function(_)
+            -- upvalues: l_v507_0 (ref), l_v398_5 (ref), l_v360_0 (ref)
+            local v511 = l_v507_0[l_v398_5.direction:get()];
+            if not v511 then
+                return false;
+            else
+                l_v360_0.yaw_base = "Local View";
+                l_v360_0.yaw_offset = l_v360_0.yaw_offset + v511;
+                return true;
+            end;
+        end;
+    end;
+    v398 = function()
+        -- upvalues: l_v354_0 (ref), l_v360_0 (ref), l_v355_0 (ref), l_v65_3 (ref)
+        if rage.exploit:get() == 0 then
+            l_v354_0 = not l_v354_0;
+            return;
+        else
+            if l_v360_0.delay_mode == "Default" then
+                l_v355_0 = l_v360_0.delay_1;
+            end;
+            if l_v360_0.delay_mode == "Randomize" then
+                l_v355_0 = math.random(l_v360_0.delay_1, l_v360_0.delay_2);
+            end;
+            if l_v360_0.delay_mode == "Sequential" then
+                l_v355_0 = l_v360_0["delay_" .. math.random(1, l_v360_0.delay_steps)];
+            end;
+            l_v65_3 = l_v65_3 + 1;
+            if l_v355_0 < l_v65_3 then
+                l_v354_0 = not l_v354_0;
+                l_v65_3 = 0;
+            end;
+            return;
+        end;
+    end;
+    v507 = function(v512)
+        -- upvalues: l_l_angles_0_1 (ref), v390 (ref), l_v365_1 (ref), l_v363_1 (ref), v388 (ref), v394 (ref), v392 (ref)
+        local _, _ = l_l_angles_0_1:update();
+        if v390:update() then
+            return;
+        elseif l_v365_1:update(v512) then
+            return;
+        elseif l_v363_1:update() then
+            return;
+        elseif v388:update() then
+            return;
+        elseif v394:update() then
+            return;
+        elseif v392:update() then
+            return;
+        else
+            return;
+        end;
+    end;
+    local function v516()
+        -- upvalues: l_v360_0 (ref), l_v354_0 (ref)
+        if not l_v360_0.yaw_add then
+            return;
+        else
+            rage.antiaim:inverter(l_v354_0);
+            local v515 = l_v354_0 and l_v360_0.yaw_left or l_v360_0.yaw_right;
+            l_v360_0.yaw_offset = l_v360_0.yaw_offset + v515;
+            return;
+        end;
+    end;
+    local function v517()
+        -- upvalues: l_v360_0 (ref)
+        if l_v360_0.modifier_mode == "Randomize" then
+            l_v360_0.modifier_offset = math.random(l_v360_0.modifier_1, l_v360_0.modifier_2);
+        end;
+        if l_v360_0.modifier_mode == "Sequential" then
+            l_v360_0.modifier_offset = l_v360_0["modifier_" .. math.random(1, l_v360_0.modifier_steps)];
+        end;
+    end;
+    local function v520()
+        -- upvalues: l_v360_0 (ref)
+        if not l_v360_0.body_yaw then
+            return;
+        else
+            if l_v360_0.body_mode == "Ticks" then
+                l_v360_0.body_yaw = globals.tickcount % l_v360_0.body_ticks > 1;
+            end;
+            if l_v360_0.body_mode == "Random" then
+                l_v360_0.body_yaw = math.random(0, l_v360_0.body_ticks) == l_v360_0.body_ticks;
+            end;
+            if l_v360_0.limit_mode == "Switch" then
+                local v518 = globals.tickcount % 4 > 1;
+                l_v360_0.left_limit = v518 and l_v360_0.limit_1 or l_v360_0.limit_2;
+                l_v360_0.right_limit = v518 and l_v360_0.limit_1 or l_v360_0.limit_2;
+            end;
+            if l_v360_0.limit_mode == "Random" then
+                local v519 = math.random(0, 1) == 1;
+                l_v360_0.left_limit = v519 and l_v360_0.limit_1 or l_v360_0.limit_2;
+                l_v360_0.right_limit = v519 and l_v360_0.limit_1 or l_v360_0.limit_2;
+            end;
+            return;
+        end;
+    end;
+    local function v523(v521)
+        -- upvalues: v17 (ref), l_v360_0 (ref)
+        v17.rage.main.double_tap_lag_options:override();
+        v17.rage.main.hide_shots_options:override();
+        if not l_v360_0.force_defensive then
+            return;
+        else
+            local v522 = nil;
+            if l_v360_0.choke_mode == "Custom" then
+                v522 = l_v360_0.choke_1;
+            end;
+            if l_v360_0.choke_mode == "Randomize" then
+                v522 = math.random(l_v360_0.choke_1, l_v360_0.choke_2);
+            end;
+            if l_v360_0.choke_mode == "Sequential" then
+                v522 = l_v360_0["choke_" .. math.random(1, l_v360_0.choke_steps)];
+            end;
+            if v522 then
+                v521.force_defensive = v521.command_number % v522 == 0;
+            end;
+            v17.rage.main.double_tap_lag_options:override("Always on");
+            v17.rage.main.hide_shots_options:override("Break LC");
+            return;
+        end;
+    end;
+    local function v525(v524)
+        -- upvalues: v398 (ref), v523 (ref), v520 (ref), v517 (ref), v516 (ref)
+        if v524.choked_commands == 0 then
+            v398();
+        end;
+        v523(v524);
+        v520();
+        v517();
+        v516();
+    end;
+    local function v527(v526)
+        -- upvalues: l_v360_0 (ref), v507 (ref), v525 (ref)
+        l_v360_0:clear();
+        l_v360_0:unset();
+        v507(v526);
+        v525(v526);
+        l_v360_0:set();
+    end;
+    local function v528()
+        -- upvalues: l_v360_0 (ref)
+        l_v360_0:clear();
+        l_v360_0:unset();
+    end;
+    local _ = nil;
+    events.shutdown(v528);
+    events.createmove(v527);
+end;
+v65 = nil;
+v65 = {};
+v354 = function(v530, v531, v532, v533)
+    return v532 * v530 / v533 + v531;
+end;
+v355 = function()
+    return globals.frametime;
+end;
+v359 = function(v534, v535, v536, v537, v538)
+    if v537 <= 0 then
+        return v536;
+    elseif v538 <= v537 then
+        return v536;
+    else
+        v535 = v534(v537, v535, v536 - v535, v538);
+        if type(v535) == "number" then
+            if math.abs(v536 - v535) < 0.001 then
+                return v536;
+            else
+                local v539 = v535 % 1;
+                if v539 < 0.001 then
+                    return math.floor(v535);
+                elseif v539 > 0.999 then
+                    return math.ceil(v535);
+                end;
+            end;
+        end;
+        return v535;
+    end;
+end;
+do
+    local l_v354_1, l_v355_1, l_v359_0 = v354, v355, v359;
+    v65.interp = function(v543, v544, v545, v546)
+        -- upvalues: l_v354_1 (ref), l_v359_0 (ref), l_v355_1 (ref)
+        if not v546 then
+            v546 = l_v354_1;
+        end;
+        if type(v544) == "boolean" then
+            v544 = v544 and 1 or 0;
+        end;
+        return l_v359_0(v546, v543, v544, l_v355_1(), v545);
+    end;
+end;
+v354 = nil;
+v354 = {};
+v355 = function(v547)
+    local v548 = {};
+    local v549 = 0;
+    for v550 in string.gmatch(v547, ".[\128-\191]*") do
+        v549 = v549 + 1;
+        v548[v549] = v550;
+    end;
+    return v548, v549;
+end;
+do
+    local l_v355_2 = v355;
+    v354.gradient = function(v552, v553, ...)
+        -- upvalues: l_v355_2 (ref)
+        local v554 = {};
+        local v555, v556 = l_v355_2(v552);
+        if v556 < 2 then
+            return v552;
+        else
+            local v557 = {
+                ...
+            };
+            local v558 = 1 / (v556 - 1);
+            local v559 = #v557 - 1;
+            for v560 = 1, v556 do
+                local v561 = v555[v560];
+                local v562 = (v553 + v560 * v558) % 2;
+                if v562 > 1 then
+                    v562 = 2 - v562;
+                end;
+                local v563 = math.floor(v562 * v559) + 1;
+                if #v557 <= v563 then
+                    v563 = #v557 - 1;
+                end;
+                local v564 = v557[v563]:lerp(v557[v563 + 1], v562 * v559 % 1);
+                v554[#v554 + 1] = "\a" .. v564:to_hex();
+                v554[#v554 + 1] = v561;
+            end;
+            return table.concat(v554);
+        end;
+    end;
+    v354.matrix = function(v565)
+        -- upvalues: l_v355_2 (ref)
+        local v566 = "abcdefghijklmnopqrstuvwxyz0123456789~!@#$%^&*+-/=?_<>";
+        local _, v568 = l_v355_2(v565);
+        local v569 = "";
+        for _ = 1, v568 do
+            local v571 = math.random(#v566);
+            v569 = v569 .. v566:sub(v571, v571);
+        end;
+        local v572 = math.abs(globals.realtime * 0.5 % 2 - 1) * (v568 + 1);
+        v572 = math.clamp(v572, 0, v568);
+        return v565:sub(1, v572) .. v569.sub(v569, v572 + 1);
+    end;
+end;
+v355 = nil;
+v359 = nil;
+v360 = l_play_0.features.misc.aspect_ratio;
+l_angles_0 = cvar.r_aspectratio;
+do
+    local l_v360_1, l_l_angles_0_2, l_v363_2, l_v365_2, l_v366_2 = v360, l_angles_0, v363, v365, v366;
+    l_v363_2 = function()
+        -- upvalues: l_l_angles_0_2 (ref)
+        local v578 = tonumber(l_l_angles_0_2:string());
+        l_l_angles_0_2:float(v578, true);
+    end;
+    l_v365_2 = function(v579)
+        -- upvalues: l_l_angles_0_2 (ref)
+        l_l_angles_0_2:float(v579:get() * 0.01, true);
+    end;
+    l_v366_2 = function()
+        -- upvalues: l_v363_2 (ref)
+        l_v363_2();
+    end;
+    local _ = nil;
+    local function v583(v581)
+        -- upvalues: l_v360_1 (ref), l_v365_2 (ref), l_v363_2 (ref), l_v366_2 (ref)
+        local v582 = v581:get();
+        if v582 then
+            l_v360_1.proportion:set_callback(l_v365_2, true);
+        else
+            l_v360_1.proportion:unset_callback(l_v365_2);
+        end;
+        if not v582 then
+            l_v363_2();
+        end;
+        events.shutdown(l_v366_2, v582);
+    end;
+    l_v360_1.enabled:set_callback(v583, true);
+end;
+v360 = nil;
+l_angles_0 = l_play_0.features.misc.viewmodel;
+v363 = cvar.viewmodel_fov;
+v365 = cvar.viewmodel_offset_x;
+v366 = cvar.viewmodel_offset_y;
+local l_viewmodel_offset_z_0 = cvar.viewmodel_offset_z;
+local function v586(v585)
+    return tonumber(v585:string());
+end;
+do
+    local l_l_angles_0_3, l_v363_3, l_v365_3, l_v366_3, l_l_viewmodel_offset_z_0_0, l_v586_0 = l_angles_0, v363, v365, v366, l_viewmodel_offset_z_0, v586;
+    local function v593()
+        -- upvalues: l_v363_3 (ref), l_v586_0 (ref), l_v365_3 (ref), l_v366_3 (ref), l_l_viewmodel_offset_z_0_0 (ref)
+        l_v363_3:float(l_v586_0(l_v363_3), true);
+        l_v365_3:float(l_v586_0(l_v365_3), true);
+        l_v366_3:float(l_v586_0(l_v366_3), true);
+        l_l_viewmodel_offset_z_0_0:float(l_v586_0(l_l_viewmodel_offset_z_0_0), true);
+    end;
+    local function v595(v594)
+        -- upvalues: l_v363_3 (ref)
+        l_v363_3:float(v594:get() * 0.1, true);
+    end;
+    local function v597(v596)
+        -- upvalues: l_v365_3 (ref)
+        l_v365_3:float(v596:get() * 0.1, true);
+    end;
+    local function v599(v598)
+        -- upvalues: l_v366_3 (ref)
+        l_v366_3:float(v598:get() * 0.1, true);
+    end;
+    local function v601(v600)
+        -- upvalues: l_l_viewmodel_offset_z_0_0 (ref)
+        l_l_viewmodel_offset_z_0_0:float(v600:get() * 0.1, true);
+    end;
+    local function v602()
+        -- upvalues: v593 (ref)
+        v593();
+    end;
+    local _ = nil;
+    local function v606(v604)
+        -- upvalues: l_l_angles_0_3 (ref), v595 (ref), v597 (ref), v599 (ref), v601 (ref), v593 (ref), v602 (ref)
+        local v605 = v604:get();
+        if v605 then
+            l_l_angles_0_3.fov:set_callback(v595, true);
+            l_l_angles_0_3.offset_x:set_callback(v597, true);
+            l_l_angles_0_3.offset_y:set_callback(v599, true);
+            l_l_angles_0_3.offset_z:set_callback(v601, true);
+        else
+            l_l_angles_0_3.fov:unset_callback(v595);
+            l_l_angles_0_3.offset_x:unset_callback(v597);
+            l_l_angles_0_3.offset_y:unset_callback(v599);
+            l_l_angles_0_3.offset_z:unset_callback(v601);
+        end;
+        if not v605 then
+            v593();
+        end;
+        events.shutdown(v602, v605);
+    end;
+    l_l_angles_0_3.enabled:set_callback(v606, true);
+end;
+l_angles_0 = nil;
+v363 = l_play_0.features.misc.log_events;
+v365 = 6;
+v366 = 6;
+l_viewmodel_offset_z_0 = 4;
+v586 = 2;
+local v607 = 8;
+local v608 = 4;
+local v609 = 24;
+local v610 = v8("\aF64F59FF", string.lower(v9.name), "\aDEFAULT", " \194\183 ");
+local v611 = {};
+do
+    local l_v363_4, l_v365_4, l_v366_4, l_l_viewmodel_offset_z_0_1, l_v586_1, l_v607_0, l_v608_0, l_v609_0, l_v610_0, l_v611_0 = v363, v365, v366, l_viewmodel_offset_z_0, v586, v607, v608, v609, v610, v611;
+    local function v622()
+        -- upvalues: l_v611_0 (ref)
+        l_v611_0 = {};
+    end;
+    local function v626(v623, v624)
+        -- upvalues: l_v363_4 (ref), l_v611_0 (ref)
+        if not l_v363_4.output:get("Notify") then
+            return;
+        else
+            local v625 = {
+                text = v624, 
+                color = v623, 
+                time = 5, 
+                alpha = 0
+            };
+            table.insert(l_v611_0, 1, v625);
+            return;
+        end;
+    end;
+    local function v648()
+        -- upvalues: l_v611_0 (ref), v65 (ref), v11 (ref), v5 (ref), l_v365_4 (ref), l_v366_4 (ref), l_l_viewmodel_offset_z_0_1 (ref), l_v586_1 (ref), l_v609_0 (ref), l_v608_0 (ref), l_v607_0 (ref)
+        local l_frametime_1 = globals.frametime;
+        local v628 = #l_v611_0;
+        for v629 = v628, 1, -1 do
+            local v630 = l_v611_0[v629];
+            local v631 = v630.time > 0 and v628 - v629 < 5;
+            v630.alpha = v65.interp(v630.alpha, v631, 0.05);
+            if v631 then
+                v630.time = v630.time - l_frametime_1;
+            elseif v630.alpha <= 0 then
+                table.remove(l_v611_0, v628);
+            end;
+        end;
+        local v632 = render.screen_size() * 0.5;
+        v632.y = v632.y * 1.7;
+        local v633 = v11.get("sparkles");
+        local v634 = render.measure_text(4, nil, v633);
+        for v635 = 1, #l_v611_0 do
+            local v636 = l_v611_0[v635];
+            local v637, v638, v639, _ = v636.color:unpack();
+            local l_text_0 = v636.text;
+            local l_alpha_0 = v636.alpha;
+            local v643 = v5(#l_text_0 * l_alpha_0);
+            l_text_0 = string.sub(l_text_0, 1, v643);
+            local v644 = render.measure_text(1, nil, l_text_0) + vector(l_v365_4, l_v366_4) * 2;
+            v644.x = v644.x + v634.x + l_l_viewmodel_offset_z_0_1 + l_v586_1 + l_l_viewmodel_offset_z_0_1;
+            local v645 = v632 - v644 * 0.5;
+            local v646 = v645 + vector(l_v365_4, l_v366_4 - 1);
+            local v647 = v646 + vector(v634.x + l_l_viewmodel_offset_z_0_1 + l_v586_1 + l_l_viewmodel_offset_z_0_1, 0);
+            render.shadow(v645, v645 + v644, color(v637, v638, v639, 128 * l_alpha_0), l_v609_0, 0, l_v608_0);
+            render.rect(v645, v645 + v644, color(18, 18, 18, 128 * l_alpha_0), l_v608_0);
+            render.text(4, v646, color(v637, v638, v639, 255 * l_alpha_0), nil, v633);
+            render.rect(v646 + vector(v634.x + l_l_viewmodel_offset_z_0_1, 0), v646 + vector(v634.x + l_l_viewmodel_offset_z_0_1 + l_v586_1, v634.y + 1), color(255, 255, 255, 128 * l_alpha_0), l_v608_0);
+            render.text(1, v647, color(255, 255, 255, 255 * l_alpha_0), nil, l_text_0);
+            v632.y = v632.y + v5((v644.y + l_v607_0) * l_alpha_0);
+        end;
+    end;
+    local v649 = {
+        [0] = "generic", 
+        [1] = "head", 
+        [2] = "chest", 
+        [3] = "stomach", 
+        [4] = "left arm", 
+        [5] = "right arm", 
+        [6] = "left leg", 
+        [7] = "right leg", 
+        [8] = "neck", 
+        [9] = nil, 
+        [10] = "gear"
+    };
+    local v650 = {
+        c4 = "Bombed", 
+        decoy = "Decoyed", 
+        molotov = "Harmed", 
+        smokegrenade = "Harmed", 
+        incgrenade = "Harmed", 
+        inferno = "Burned", 
+        hegrenade = "Naded", 
+        flashbang = "Harmed", 
+        knife = "Knifed"
+    };
+    local function v654(v651, v652)
+        v652 = v652:to_hex();
+        return (v651:gsub("%${(.-)}", function(v653)
+            -- upvalues: v652 (ref)
+            return string.format("\a%s%s\aDEFAULT", v652, v653);
+        end));
+    end;
+    local function v657(_, v656)
+        -- upvalues: l_v363_4 (ref), l_v610_0 (ref)
+        if not l_v363_4.output:get("Debug") then
+            return;
+        else
+            print_dev(l_v610_0 .. v656);
+            return;
+        end;
+    end;
+    local function v660(_, v659)
+        -- upvalues: l_v363_4 (ref), l_v610_0 (ref)
+        if not l_v363_4.output:get("Console") then
+            return;
+        else
+            print_raw(l_v610_0 .. v659);
+            return;
+        end;
+    end;
+    local function v662(v661)
+        -- upvalues: v649 (ref)
+        return v649[v661] or "?";
+    end;
+    local function v678(v663)
+        -- upvalues: v662 (ref), l_v363_4 (ref), v654 (ref), v626 (ref), v657 (ref), v660 (ref)
+        local l_target_0 = v663.target;
+        if l_target_0 == nil then
+            return;
+        else
+            local v665 = "Hit";
+            if not v663.target:is_alive() then
+                v665 = "Killed";
+            end;
+            local v666 = l_target_0:get_name();
+            local v667 = v662(v663.hitgroup);
+            local v668 = v662(v663.wanted_hitgroup);
+            local l_damage_0 = v663.damage;
+            local l_wanted_damage_0 = v663.wanted_damage;
+            local l_hitchance_0 = v663.hitchance;
+            local l_backtrack_0 = v663.backtrack;
+            local v673 = l_v363_4.color_hit:get();
+            local v674 = nil;
+            v674 = string.format("%s ${%s} in ${%s} for ${%s} damage", v665, v666, v667, l_damage_0);
+            v674 = v654(v674, v673);
+            local v675 = nil;
+            if v667 ~= v668 then
+                v667 = string.format("%s(%s)", v667, v668);
+            end;
+            if l_damage_0 ~= l_wanted_damage_0 then
+                l_damage_0 = string.format("%s(%d)", l_damage_0, l_wanted_damage_0);
+            end;
+            local v676 = {};
+            local v677 = " \194\183 ";
+            table.insert(v676, string.format("hc: ${%d%%}", l_hitchance_0));
+            table.insert(v676, string.format("bt: ${%dt}", l_backtrack_0));
+            v676 = table.concat(v676, v677);
+            v675 = string.format("%s ${%s} in ${%s} for ${%s} damage (%s)", v665, v666, v667, l_damage_0, v676);
+            v675 = v654(v675, v673);
+            v626(v673, v674);
+            v657(v673, v675);
+            v660(v673, v675);
+            return;
+        end;
+    end;
+    local function v691(v679)
+        -- upvalues: v662 (ref), l_v363_4 (ref), v654 (ref), v626 (ref), v657 (ref), v660 (ref)
+        local l_target_1 = v679.target;
+        if l_target_1 == nil then
+            return;
+        else
+            local v681 = l_target_1:get_name();
+            local v682 = v662(v679.wanted_hitgroup);
+            local l_state_0 = v679.state;
+            local l_hitchance_1 = v679.hitchance;
+            local l_backtrack_1 = v679.backtrack;
+            local v686 = l_v363_4.color_miss:get();
+            local v687 = nil;
+            v687 = string.format("Missed ${%s}'s ${%s} due to ${%s}", v681, v682, l_state_0);
+            v687 = v654(v687, v686);
+            local v688 = nil;
+            local v689 = {};
+            local v690 = " \194\183 ";
+            table.insert(v689, string.format("hc: ${%d%%}", l_hitchance_1));
+            table.insert(v689, string.format("bt: ${%dt}", l_backtrack_1));
+            v689 = table.concat(v689, v690);
+            v688 = string.format("Missed ${%s}'s ${%s} due to ${%s} (%s)", v681, v682, l_state_0, v689);
+            v688 = v654(v688, v686);
+            v626(v686, v687);
+            v657(v686, v688);
+            v660(v686, v688);
+            return;
+        end;
+    end;
+    local function v693(v692)
+        -- upvalues: v678 (ref), v691 (ref)
+        if v692.state == nil then
+            v678(v692);
+        else
+            v691(v692);
+        end;
+    end;
+    local function v702(v694)
+        -- upvalues: v650 (ref), l_v363_4 (ref), v654 (ref), v626 (ref), v657 (ref), v660 (ref)
+        local v695 = entity.get_local_player();
+        local v696 = entity.get(v694.userid, true);
+        if entity.get(v694.attacker, true) ~= v695 or v696 == v695 then
+            return;
+        else
+            local v697 = v650[v694.weapon];
+            if v697 == nil then
+                return;
+            else
+                local v698 = v696:get_name();
+                local l_dmg_health_0 = v694.dmg_health;
+                local v700 = l_v363_4.color_hit:get();
+                local v701 = string.format("%s ${%s} for ${%d} damage", v697, v698, l_dmg_health_0);
+                v701 = v654(v701, v700);
+                v626(v700, v701);
+                v657(v700, v701);
+                v660(v700, v701);
+                return;
+            end;
+        end;
+    end;
+    local function v708(v703)
+        -- upvalues: l_v363_4 (ref), v654 (ref), v626 (ref), v657 (ref), v660 (ref)
+        local v704 = v703.attacker:get_name();
+        local _ = v703.offset;
+        local v706 = l_v363_4.color_hit:get();
+        local v707 = string.format("Anti-bruteforce triggered by ${%s}", v704);
+        v707 = v654(v707, v706);
+        v626(v706, v707);
+        v657(v706, v707);
+        v660(v706, v707);
+    end;
+    local _ = nil;
+    local function v711(v710)
+        -- upvalues: v622 (ref)
+        if not v710:get("Notify") then
+            v622();
+        end;
+    end;
+    do
+        local l_v711_0 = v711;
+        local function v715(v713)
+            -- upvalues: l_v363_4 (ref), l_v711_0 (ref), v622 (ref), v708 (ref), v702 (ref), v693 (ref), v648 (ref)
+            local v714 = v713:get();
+            if v714 then
+                l_v363_4.output:set_callback(l_v711_0);
+            else
+                l_v363_4.output:unset_callback(l_v711_0);
+            end;
+            if not v714 then
+                v622();
+            end;
+            events.bruteforce(v708, v714);
+            events.player_hurt(v702, v714);
+            events.aim_ack(v693, v714);
+            events.render(v648, v714);
+        end;
+        l_v363_4.enabled:set_callback(v715, true);
+    end;
+end;
+v363 = nil;
+v365 = l_play_0.features.misc.unlock_fake_latency;
+v366 = cvar.sv_maxunlag;
+do
+    local l_v366_5, l_l_viewmodel_offset_z_0_2, l_v586_2, l_v607_1 = v366, l_viewmodel_offset_z_0, v586, v607;
+    l_l_viewmodel_offset_z_0_2 = function()
+        -- upvalues: l_v366_5 (ref)
+        l_v366_5:float(tonumber(l_v366_5:string()), true);
+    end;
+    l_v586_2 = function()
+        -- upvalues: l_v366_5 (ref)
+        l_v366_5:float(0.4, true);
+    end;
+    l_v607_1 = function()
+        -- upvalues: l_l_viewmodel_offset_z_0_2 (ref)
+        l_l_viewmodel_offset_z_0_2();
+    end;
+    v608 = nil;
+    v609 = function(v720)
+        -- upvalues: l_v586_2 (ref), l_l_viewmodel_offset_z_0_2 (ref), l_v607_1 (ref)
+        local v721 = v720:get();
+        if v721 then
+            l_v586_2();
+        else
+            l_l_viewmodel_offset_z_0_2();
+        end;
+        events.shutdown(l_v607_1, v721);
+    end;
+    v365.enabled:set_callback(v609, true);
+end;
+v365 = nil;
+v366 = l_play_0.features.misc.notify_on_round_start;
+ffi.cdef("            int GetForegroundWindow();\n            bool FlashWindow(int hwnd, bool invert);\n            int FindWindowA(const char* class, const char* name);\n        ");
+l_viewmodel_offset_z_0 = ffi.load("user32");
+v586 = l_viewmodel_offset_z_0.FindWindowA("Valve001", "Counter-Strike: Global Offensive - Direct3D 9");
+do
+    local l_l_viewmodel_offset_z_0_3, l_v586_3, l_v607_2, l_v608_1 = l_viewmodel_offset_z_0, v586, v607, v608;
+    l_v607_2 = function()
+        -- upvalues: l_l_viewmodel_offset_z_0_3 (ref), l_v586_3 (ref)
+        return l_l_viewmodel_offset_z_0_3.GetForegroundWindow() == l_v586_3;
+    end;
+    l_v608_1 = function()
+        -- upvalues: l_v607_2 (ref), l_l_viewmodel_offset_z_0_3 (ref), l_v586_3 (ref)
+        if not l_v607_2() then
+            l_l_viewmodel_offset_z_0_3.FlashWindow(l_v586_3, true);
+        end;
+    end;
+    v609 = nil;
+    v610 = function(v726)
+        -- upvalues: l_v608_1 (ref)
+        events.round_start(l_v608_1, v726:get());
+    end;
+    v366.enabled:set_callback(v610, true);
+end;
+v359 = nil;
+v360 = nil;
+l_angles_0 = l_play_0.features.movement.no_fall_damage;
+v363 = false;
+v365 = math.pi * 2;
+v366 = v365 / 8;
+do
+    local l_v363_5, l_v365_5, l_v366_6, l_l_viewmodel_offset_z_0_4, l_v586_4 = v363, v365, v366, l_viewmodel_offset_z_0, v586;
+    l_l_viewmodel_offset_z_0_4 = function(v732, v733)
+        -- upvalues: l_v365_5 (ref), l_v366_6 (ref)
+        local v734 = v732:get_origin();
+        for v735 = 0, l_v365_5, l_v366_6 do
+            local v736 = math.sin(v735);
+            local v737 = math.cos(v735);
+            local v738 = v734.x + v737 * 10;
+            local v739 = v734.y + v736 * 10;
+            local v740 = vector(v738, v739, v734.z);
+            local v741 = v740:clone();
+            v741.z = v741.z - v733;
+            if utils.trace_line(v740, v741, v732).fraction ~= 1 then
+                return true;
+            end;
+        end;
+        return false;
+    end;
+    l_v586_4 = function(v742)
+        -- upvalues: l_v363_5 (ref), l_l_viewmodel_offset_z_0_4 (ref)
+        local v743 = entity.get_local_player();
+        if v743 == nil then
+            return;
+        elseif v743.m_vecVelocity.z >= -500 then
+            l_v363_5 = false;
+            return;
+        else
+            if l_l_viewmodel_offset_z_0_4(v743, 15) then
+                l_v363_5 = false;
+            elseif l_l_viewmodel_offset_z_0_4(v743, 75) then
+                l_v363_5 = true;
+            end;
+            v742.in_duck = l_v363_5;
+            return;
+        end;
+    end;
+    v607 = nil;
+    v608 = function(v744)
+        -- upvalues: l_v586_4 (ref)
+        events.createmove(l_v586_4, v744:get());
+    end;
+    l_angles_0.enabled:set_callback(v608, true);
+end;
+l_angles_0 = nil;
+v363 = l_play_0.features.movement.fast_ladder;
+v365 = 9;
+v366 = function(v745)
+    local l_x_0 = render.camera_angles().x;
+    if v745.forwardmove > 0 and l_x_0 < 45 then
+        v745.view_angles.x = 89;
+        v745.in_moveright = 1;
+        v745.in_moveleft = 0;
+        v745.in_forward = 0;
+        v745.in_back = 1;
+        if v745.sidemove == 0 then
+            v745.view_angles.y = v745.view_angles.y + 90;
+        end;
+        if v745.sidemove < 0 then
+            v745.view_angles.y = v745.view_angles.y + 150;
+        end;
+        if v745.sidemove > 0 then
+            v745.view_angles.y = v745.view_angles.y + 30;
+        end;
+    end;
+    if v745.forwardmove < 0 then
+        v745.view_angles.x = 89;
+        v745.in_moveleft = 1;
+        v745.in_moveright = 0;
+        v745.in_forward = 1;
+        v745.in_back = 0;
+        if v745.sidemove == 0 then
+            v745.view_angles.y = v745.view_angles.y + 90;
+        end;
+        if v745.sidemove > 0 then
+            v745.view_angles.y = v745.view_angles.y + 150;
+        end;
+        if v745.sidemove < 0 then
+            v745.view_angles.y = v745.view_angles.y + 30;
+        end;
+    end;
+end;
+do
+    local l_v365_6, l_v366_7, l_l_viewmodel_offset_z_0_5 = v365, v366, l_viewmodel_offset_z_0;
+    l_l_viewmodel_offset_z_0_5 = function(v750)
+        -- upvalues: l_v365_6 (ref), l_v366_7 (ref)
+        local v751 = entity.get_local_player();
+        if v751 == nil then
+            return;
+        elseif v751.m_MoveType ~= l_v365_6 then
+            return;
+        else
+            l_v366_7(v750);
+            return;
+        end;
+    end;
+    v586 = nil;
+    v607 = function(v752)
+        -- upvalues: l_l_viewmodel_offset_z_0_5 (ref)
+        events.createmove(l_l_viewmodel_offset_z_0_5, v752:get());
+    end;
+    v363.enabled:set_callback(v607, true);
+end;
+v363 = nil;
+v365 = l_play_0.features.movement.super_toss;
+v366 = 0.3;
+l_viewmodel_offset_z_0 = function(v753, v754, v755)
+    return v753 + v755 * (v754 - v753);
+end;
+do
+    local l_v366_8, l_l_viewmodel_offset_z_0_6, l_v586_5, l_v607_3, l_v608_2 = v366, l_viewmodel_offset_z_0, v586, v607, v608;
+    l_v586_5 = function(v761, v762, v763, v764)
+        -- upvalues: l_l_viewmodel_offset_z_0_6 (ref), l_v366_8 (ref)
+        v761.x = v761.x - 10 + math.abs(v761.x) / 9;
+        local v765 = vector():angles(v761);
+        local v766 = v764 * 1.25;
+        local v767 = math.clamp(v762 * 0.9, 15, 750);
+        local v768 = math.clamp(v763, 0, 1);
+        v767 = v767 * l_l_viewmodel_offset_z_0_6(l_v366_8, 1, v768);
+        local l_v765_0 = v765;
+        for _ = 1, 8 do
+            l_v765_0 = (v765 * (l_v765_0 * v767 + v766):length() - v766) / v767;
+            l_v765_0:normalize();
+        end;
+        local v771 = l_v765_0.angles(l_v765_0);
+        if v771.x > -10 then
+            v771.x = 0.9 * v771.x + 9;
+        else
+            v771.x = 1.125 * v771.x + 11.25;
+        end;
+        return v771;
+    end;
+    l_v607_3 = function(v772)
+        -- upvalues: l_v586_5 (ref)
+        local v773 = entity.get_local_player();
+        if v773 == nil then
+            return;
+        else
+            local v774 = v773:get_player_weapon();
+            if v774 == nil then
+                return;
+            else
+                local v775 = v774:get_weapon_info();
+                if v775 == nil then
+                    return;
+                else
+                    v772.angles = l_v586_5(v772.angles, v775.throw_velocity, v774.m_flThrowStrength, v772.velocity);
+                    return;
+                end;
+            end;
+        end;
+    end;
+    l_v608_2 = function(v776)
+        -- upvalues: l_v586_5 (ref)
+        if v776.jitter_move ~= true then
+            return;
+        else
+            local v777 = entity.get_local_player();
+            if v777 == nil then
+                return;
+            else
+                local v778 = v777:get_player_weapon();
+                if v778 == nil then
+                    return;
+                else
+                    local v779 = v778:get_weapon_info();
+                    if v779 == nil or v779.weapon_type ~= 9 then
+                        return;
+                    elseif v778.m_fThrowTime < globals.curtime - to_time(globals.clock_offset) then
+                        return;
+                    else
+                        v776.in_speed = true;
+                        local v780 = v777:simulate_movement();
+                        v780:think();
+                        v776.view_angles = l_v586_5(v776.view_angles, v779.throw_velocity, v778.m_flThrowStrength, v780.velocity);
+                        return;
+                    end;
+                end;
+            end;
+        end;
+    end;
+    v609 = nil;
+    v610 = function(v781)
+        -- upvalues: l_v608_2 (ref), l_v607_3 (ref)
+        local v782 = v781:get();
+        events.createmove(l_v608_2, v782);
+        events.grenade_override_view(l_v607_3, v782);
+    end;
+    v365.enabled:set_callback(v610, true);
+end;
+v365 = nil;
+v366 = l_play_0.features.movement.edge_stop;
+l_viewmodel_offset_z_0 = function(v783)
+    local v784 = entity.get_local_player();
+    if v784 == nil then
+        return;
+    else
+        local v785 = v784:simulate_movement();
+        v785:think(5);
+        if v785.velocity.z < 0 then
+            v783.block_movement = 2;
+        end;
+        return;
+    end;
+end;
+v586 = nil;
+do
+    local l_l_viewmodel_offset_z_0_7 = l_viewmodel_offset_z_0;
+    v607 = function(v787)
+        -- upvalues: l_l_viewmodel_offset_z_0_7 (ref)
+        events.createmove(l_l_viewmodel_offset_z_0_7, v787:get());
+    end;
+    v366.enabled:set_callback(v607, true);
+end;
+v366 = nil;
+l_viewmodel_offset_z_0 = l_play_0.features.movement.fake_duck;
+v586 = 5;
+do
+    local l_v586_6, l_v607_4 = v586, v607;
+    l_v607_4 = function(v790)
+        -- upvalues: v17 (ref), l_v586_6 (ref)
+        if not v17.antiaim.misc.fake_duck:get() then
+            return;
+        elseif entity.get_local_player() == nil then
+            return;
+        else
+            local l_forwardmove_0 = v790.forwardmove;
+            local l_sidemove_0 = v790.sidemove;
+            if math.abs(l_forwardmove_0) > l_v586_6 or math.abs(l_sidemove_0) > l_v586_6 then
+                local v793 = 450 / (l_forwardmove_0 * l_forwardmove_0 + l_sidemove_0 * l_sidemove_0) ^ 0.5;
+                v790.forwardmove = l_forwardmove_0 * v793;
+                v790.sidemove = l_sidemove_0 * v793;
+            end;
+            return;
+        end;
+    end;
+    v608 = nil;
+    v609 = function(v794)
+        -- upvalues: l_v607_4 (ref)
+        events.createmove_run(l_v607_4, v794:get());
+    end;
+    l_viewmodel_offset_z_0.unlock_speed:set_callback(v609, true);
+end;
+l_viewmodel_offset_z_0 = nil;
+v586 = l_play_0.features.movement.fake_duck;
+v607 = 0;
+v608 = function()
+    local v795 = entity.get_game_rules();
+    if v795 == nil then
+        return false;
+    else
+        return v795.m_bFreezePeriod;
+    end;
+end;
+do
+    local l_v607_5, l_v608_3, l_v609_1, l_v610_1, l_v611_1 = v607, v608, v609, v610, v611;
+    l_v609_1 = function()
+        -- upvalues: v17 (ref), l_v608_3 (ref)
+        if not v17.antiaim.misc.fake_duck:get() then
+            return false;
+        else
+            return l_v608_3();
+        end;
+    end;
+    l_v610_1 = function(v801)
+        -- upvalues: l_v609_1 (ref)
+        if not l_v609_1() then
+            return;
+        else
+            rage.exploit:force_teleport();
+            v801.in_duck = v801.choked_commands >= 7;
+            v801.send_packet = v801.choked_commands ~= 14;
+            return;
+        end;
+    end;
+    l_v611_1 = function(v802)
+        -- upvalues: l_v609_1 (ref), l_v607_5 (ref)
+        if not l_v609_1() then
+            l_v607_5 = v802.camera.z;
+            return;
+        else
+            v802.camera.z = l_v607_5;
+            return;
+        end;
+    end;
+    local _ = nil;
+    local function v806(v804)
+        -- upvalues: l_v611_1 (ref), l_v610_1 (ref)
+        local v805 = v804:get();
+        events.override_view(l_v611_1, v805);
+        events.createmove(l_v610_1, v805);
+    end;
+    v586.on_freezetime:set_callback(v806, true);
+end;
+v360 = nil;
+l_angles_0 = nil;
+l_angles_0 = {};
+v363 = {};
+v365 = render.screen_size();
+v366 = ui.create("Windows"):visibility(false);
+l_viewmodel_offset_z_0 = nil;
+v586 = nil;
+v607 = {
+    mouse_pos = vector(), 
+    mouse_pos_prev = vector(), 
+    mouse_down = false, 
+    mouse_clicked = false, 
+    mouse_down_duration = 0, 
+    mouse_delta = vector(), 
+    mouse_clicked_pos = vector()
+};
+do
+    local l_v363_6, l_v365_7, l_v366_9, l_l_viewmodel_offset_z_0_8, l_v586_7, l_v607_6, l_v608_4, l_v609_2, l_v610_2, l_v611_2 = v363, v365, v366, l_viewmodel_offset_z_0, v586, v607, v608, v609, v610, v611;
+    l_v607_6.update_mouse_inputs = function()
+        -- upvalues: l_v607_6 (ref)
+        local l_frametime_2 = globals.frametime;
+        local v818 = ui.get_mouse_position();
+        local v819 = common.is_button_down(1);
+        l_v607_6.mouse_pos_prev = l_v607_6.mouse_pos;
+        l_v607_6.mouse_pos = v818;
+        l_v607_6.mouse_delta = l_v607_6.mouse_pos - l_v607_6.mouse_pos_prev;
+        l_v607_6.mouse_down = v819;
+        l_v607_6.mouse_clicked = v819 and l_v607_6.mouse_down_duration < 0;
+        local l_l_v607_6_0 = l_v607_6;
+        local v821;
+        if v819 then
+            if l_v607_6.mouse_down_duration < 0 then
+                v821 = 0;
+                goto label0 --[[  true, true  ]];
+            else
+                v821 = l_v607_6.mouse_down_duration + l_frametime_2;
+                if v821 then
+                    goto label0;
+                end;
+            end;
+        end;
+        v821 = -1;
+        ::label0::;
+        l_l_v607_6_0.mouse_down_duration = v821;
+        if l_v607_6.mouse_clicked then
+            l_v607_6.mouse_clicked_pos = l_v607_6.mouse_pos;
+        end;
+    end;
+    l_v608_4 = {};
+    l_v608_4.__index = l_v608_4;
+    l_v608_4.__new = function(v822, v823)
+        local v824 = {
+            name = v823, 
+            item = {}, 
+            is_dragged = false, 
+            is_hovered = false, 
+            pos = vector(), 
+            size = vector()
+        };
+        return setmetatable(v824, v822);
+    end;
+    l_v608_4.get_pos = function(v825)
+        return v825.pos;
+    end;
+    l_v608_4.set_pos = function(v826, v827)
+        -- upvalues: l_v365_7 (ref)
+        local v828 = v827:clone();
+        v828.x = math.clamp(v828.x, 0, l_v365_7.x - v826.size.x);
+        v828.y = math.clamp(v828.y, 0, l_v365_7.y - v826.size.y);
+        if v826.pos ~= v828 then
+            v826.item.x:set(v828.x + v826.size.x);
+            v826.item.y:set(v828.y + v826.size.y);
+        end;
+        v826.pos = v828;
+        return v826;
+    end;
+    l_v608_4.get_size = function(v829)
+        return v829.size;
+    end;
+    l_v608_4.set_size = function(v830, v831)
+        v830.size = v831;
+        v830:set_pos(v830.pos);
+        return v830;
+    end;
+    l_v608_4.build = function(v832, v833)
+        -- upvalues: v16 (ref), l_v366_9 (ref), l_v365_7 (ref), l_v363_6 (ref)
+        v832.item = {
+            x = v16.push("Interface", v832.name .. ":x", l_v366_9:slider(v832.name .. ":x", 0, l_v365_7.x, v833.x)), 
+            y = v16.push("Interface", v832.name .. ":y", l_v366_9:slider(v832.name .. ":y", 0, l_v365_7.y, v833.y))
+        };
+        v832.pos = vector(v832.item.x:get(), v832.item.y:get());
+        table.insert(l_v363_6, v832);
+        return v832;
+    end;
+    l_v609_2 = function(v834, v835, v836)
+        return v834.x >= v835.x and v834.x <= v836.x and v834.y >= v835.y and v834.y <= v836.y;
+    end;
+    l_v610_2 = function()
+        -- upvalues: l_v363_6 (ref), l_v609_2 (ref), l_v607_6 (ref), l_l_viewmodel_offset_z_0_8 (ref)
+        local v837 = nil;
+        if ui.get_alpha() > 0 then
+            for v838 = 1, #l_v363_6 do
+                local v839 = l_v363_6[v838];
+                local l_pos_0 = v839.pos;
+                local l_size_0 = v839.size;
+                if l_v609_2(l_v607_6.mouse_pos, l_pos_0, l_pos_0 + l_size_0) then
+                    v837 = v839;
+                end;
+            end;
+        end;
+        l_l_viewmodel_offset_z_0_8 = v837;
+    end;
+    l_v611_2 = function()
+        -- upvalues: l_v607_6 (ref), l_v586_7 (ref), l_l_viewmodel_offset_z_0_8 (ref)
+        if not l_v607_6.mouse_down then
+            l_v586_7 = nil;
+            return;
+        else
+            if l_v607_6.mouse_clicked and l_l_viewmodel_offset_z_0_8 ~= nil then
+                l_v586_7 = l_l_viewmodel_offset_z_0_8;
+            end;
+            return;
+        end;
+    end;
+    local function v844()
+        -- upvalues: l_v363_6 (ref)
+        for v842 = 1, #l_v363_6 do
+            local v843 = l_v363_6[v842];
+            v843.is_dragged = false;
+            v843.is_hovered = false;
+        end;
+    end;
+    local function v845()
+        -- upvalues: l_l_viewmodel_offset_z_0_8 (ref)
+        if l_l_viewmodel_offset_z_0_8 == nil then
+            return;
+        else
+            l_l_viewmodel_offset_z_0_8.is_hovered = true;
+            return;
+        end;
+    end;
+    local function v847()
+        -- upvalues: l_v586_7 (ref), l_v607_6 (ref)
+        if l_v586_7 == nil then
+            return;
+        else
+            local v846 = l_v586_7.pos + l_v607_6.mouse_delta;
+            l_v586_7:set_pos(v846);
+            l_v586_7.is_dragged = true;
+            return;
+        end;
+    end;
+    local function v848()
+        -- upvalues: l_v607_6 (ref), l_v610_2 (ref), l_v611_2 (ref), v844 (ref), v845 (ref), v847 (ref)
+        l_v607_6.update_mouse_inputs();
+        l_v610_2();
+        l_v611_2();
+        v844();
+        v845();
+        v847();
+    end;
+    local function v850(v849)
+        -- upvalues: l_v586_7 (ref), l_l_viewmodel_offset_z_0_8 (ref)
+        if not (l_v586_7 ~= nil or l_l_viewmodel_offset_z_0_8 ~= nil) then
+            return;
+        else
+            v849.in_attack = false;
+            v849.in_attack2 = false;
+            return;
+        end;
+    end;
+    l_angles_0.new = function(v851, v852)
+        -- upvalues: l_v608_4 (ref)
+        return l_v608_4:__new(v851, v852);
+    end;
+    events.render(v848);
+    events.createmove(v850);
+end;
+v363 = nil;
+v365 = l_play_0.features.interface.watermark;
+v366 = {
+    Small = 2, 
+    Bold = 4, 
+    Console = 3, 
+    Default = 1
+};
+l_viewmodel_offset_z_0 = {
+    color(255, 0, 0, 255), 
+    color(255, 127, 0, 255), 
+    color(255, 255, 0, 255), 
+    color(0, 255, 0, 255), 
+    color(0, 0, 255, 255), 
+    color(75, 0, 130, 255), 
+    color(148, 0, 211, 255)
+};
+v586 = 4;
+v607 = 4;
+v608 = render.screen_size();
+v609 = l_angles_0.new("watermark"):build(vector(8, v608.y * 0.5));
+do
+    local l_v365_8, l_v366_10, l_l_viewmodel_offset_z_0_9, l_v586_8, l_v607_7, l_v609_3 = v365, v366, l_viewmodel_offset_z_0, v586, v607, v609;
+    v610 = function()
+        -- upvalues: l_v609_3 (ref), l_v365_8 (ref), l_v366_10 (ref), v9 (ref), v354 (ref), l_l_viewmodel_offset_z_0_9 (ref), l_v586_8 (ref), l_v607_7 (ref)
+        local v859 = l_v609_3:get_pos():clone();
+        local v860 = l_v366_10[l_v365_8.font:get()];
+        local v861 = l_v365_8.text:get();
+        if #v861 == 0 then
+            v861 = v9.name;
+        end;
+        local v862 = l_v365_8.col_a:get();
+        local v863 = l_v365_8.col_b:get();
+        if l_v365_8.effects:get("Matrix") then
+            v861 = v354.matrix(v861);
+        end;
+        if l_v365_8.effects:get("Gradient") then
+            local v864 = -(globals.realtime * 1.5);
+            if l_v365_8.rainbow:get() then
+                v861 = v354.gradient(v861, v864, unpack(l_l_viewmodel_offset_z_0_9));
+            else
+                v861 = v354.gradient(v861, v864, v862, v863);
+            end;
+        end;
+        if l_v365_8.effects:get("Pulse") then
+            local v865 = globals.realtime * 3;
+            local v866 = math.sin(v865) * 0.5 + 0.5;
+            v862.a = v862.a * v866;
+        end;
+        if v860 == 2 then
+            v861 = string.upper(v861);
+        end;
+        local v867 = render.measure_text(v860, nil, v861) + vector(l_v586_8, l_v607_7) * 2;
+        render.text(v860, v859 + vector(l_v586_8, l_v607_7), v862, nil, v861);
+        l_v609_3:set_size(v867);
+    end;
+    v611 = nil;
+    events.render(v610);
+end;
+v365 = nil;
+v366 = l_play_0.features.interface.skeet_indicators;
+l_viewmodel_offset_z_0 = vector(24, 22, 0);
+v586 = render.load_font("Calibri", l_viewmodel_offset_z_0, "ab");
+v607 = 520;
+v608 = 8;
+v609 = 24;
+v610 = 4;
+v611 = 3;
+local v868 = vector(30, 30);
+local v869 = render.load_image_from_file("materials/panorama/images/icons/ui/bomb_c4.svg", v868);
+local v870 = color(0, 0, 0, 50);
+local v871 = color(0, 0, 0, 0);
+local function v874(v872)
+    local v873 = v872:get_override();
+    if v873 ~= nil then
+        return v873;
+    else
+        return v872:get();
+    end;
+end;
+local function v881(v875)
+    local v876 = ui.get_binds(true);
+    for v877 = 1, #v876 do
+        local v878 = v876[v877];
+        local l_value_0 = v878.value;
+        local l_reference_0 = v878.reference;
+        if l_reference_0:get() == l_value_0 and l_reference_0:id() == v875:id() then
+            return true;
+        end;
+    end;
+    return false;
+end;
+local function v887(v882, v883)
+    local v884 = 0.5;
+    local v885 = 0.5;
+    if v883 > 0 then
+        local v886 = v882 * v884;
+        if v883 < (v882 - v886) * v885 then
+            v886 = v882 - v883 * (1 / v885);
+        end;
+        v882 = v886;
+    end;
+    return v882;
+end;
+do
+    local l_v366_11, l_v586_9, l_v607_8, l_v608_5, l_v609_4, l_v610_3, l_v611_3, l_v868_0, l_v869_0, l_v870_0, l_v871_0, l_v874_0, l_v881_0, l_v887_0 = v366, v586, v607, v608, v609, v610, v611, v868, v869, v870, v871, v874, v881, v887;
+    local function v910(v902, v903)
+        -- upvalues: l_v887_0 (ref)
+        local v904 = 1;
+        local v905 = 500;
+        local v906 = v905 * 3.5;
+        local v907 = (v903:get_origin() - v902:get_origin()):length();
+        local v908 = v906 / 3;
+        local v909 = v905 * math.exp(-v907 * v907 / (2 * v908 * v908)) * v904;
+        return l_v887_0(v909, v902.m_ArmorValue);
+    end;
+    local function v923(v911, v912, v913, v914, v915)
+        -- upvalues: l_v609_4 (ref), l_v610_3 (ref), l_v586_9 (ref), l_v868_0 (ref), l_v871_0 (ref), l_v870_0 (ref), v5 (ref), l_v608_5 (ref)
+        local v916 = v911 + vector(l_v609_4, l_v610_3);
+        local v917 = render.measure_text(l_v586_9, nil, v913);
+        local l_v917_0 = v917;
+        l_v917_0.y = l_v917_0.y + l_v610_3 * 2;
+        l_v917_0 = l_v917_0 + vector(50, 2);
+        v916.y = v916.y + 3;
+        if v914 then
+            l_v917_0.x = l_v917_0.x + 30;
+        end;
+        if v915 then
+            l_v917_0.x = l_v917_0.x + l_v868_0.x + 2;
+        end;
+        local l_v911_0 = v911;
+        local v920 = v911 + l_v917_0;
+        local v921 = (l_v911_0 + v920) * 0.5;
+        render.gradient(l_v911_0, vector(v921.x, v920.y), l_v871_0, l_v870_0, l_v871_0, l_v870_0);
+        render.gradient(v920, vector(v921.x, l_v911_0.y), l_v871_0, l_v870_0, l_v871_0, l_v870_0);
+        if v915 then
+            l_v911_0 = v911:clone();
+            l_v911_0.x = l_v911_0.x + l_v609_4;
+            l_v911_0.y = l_v911_0.y + (l_v917_0.y - l_v868_0.y) * 0.5;
+            render.texture(v915, l_v911_0, l_v868_0, v912, "f");
+            v916.x = v916.x + l_v868_0.x + 6;
+        end;
+        render.text(l_v586_9, v916 + 1, color(0, 0, 0, 128), nil, v913);
+        render.text(l_v586_9, v916, v912, nil, v913);
+        v916.x = v916.x + v917.x;
+        if v914 then
+            l_v911_0 = 10;
+            v920 = 5;
+            v921 = color(255, 255, 255, 200);
+            local v922 = vector(v916.x + l_v911_0 * 0.5 + 12, v911.y + l_v917_0.y * 0.5);
+            render.circle_outline(v922, color(0, 0, 0, 255), l_v911_0, 0, 1, v920);
+            render.circle_outline(v922, v921, l_v911_0 - 1, 0, v914, v920 - 2);
+        end;
+        v911.y = v911.y - v5(l_v917_0.y + l_v608_5);
+    end;
+    local function v934(v924, v925, v926)
+        -- upvalues: v923 (ref), l_v869_0 (ref)
+        local v927 = v925:get_player_weapon();
+        if v927 == nil then
+            return;
+        elseif not v927.m_bStartedArming then
+            return;
+        else
+            local l_m_fArmedTime_0 = v927.m_fArmedTime;
+            if l_m_fArmedTime_0 == nil then
+                return;
+            else
+                local v929 = v925:get_origin();
+                local l_m_bombsiteCenterA_0 = v926.m_bombsiteCenterA;
+                local l_m_bombsiteCenterB_0 = v926.m_bombsiteCenterB;
+                local v932 = v929:distsqr(l_m_bombsiteCenterA_0) < v929:distsqr(l_m_bombsiteCenterB_0) and "A" or "B";
+                local v933 = (l_m_fArmedTime_0 - globals.curtime) / 3;
+                v923(v924, color(252, 243, 105, 255), v932, 1 - v933, l_v869_0);
+                return;
+            end;
+        end;
+    end;
+    local function v950(v935, v936, v937)
+        -- upvalues: v923 (ref), l_v869_0 (ref), v910 (ref)
+        local l_m_bBombDefused_0 = v937.m_bBombDefused;
+        if not v937.m_bBombTicking or l_m_bBombDefused_0 then
+            return;
+        else
+            local l_curtime_0 = globals.curtime;
+            local l_m_flC4Blow_0 = v937.m_flC4Blow;
+            local v941 = l_m_flC4Blow_0 - l_curtime_0;
+            if v941 > 0 then
+                if v937.m_hBombDefuser ~= nil then
+                    local v942 = render.screen_size();
+                    local l_m_flDefuseCountDown_0 = v937.m_flDefuseCountDown;
+                    local v944 = (l_m_flDefuseCountDown_0 - l_curtime_0) / 10;
+                    local v945 = l_m_flC4Blow_0 < l_m_flDefuseCountDown_0 and color(235, 50, 75, 125) or color(50, 235, 75, 125);
+                    local v946 = (v942.y - 2) * v944;
+                    render.rect(vector(0, 0), vector(20, v942.y), color(0, 0, 0, 115));
+                    render.rect(vector(1, 1 + v946), vector(19, v942.y - 1), v945);
+                end;
+                local v947 = string.format("%s - %.1fs", v937.m_nBombSite == 1 and "B" or "A", v941);
+                v923(v935, color(255, 255, 255, 200), v947, nil, l_v869_0);
+            end;
+            local l_m_iHealth_0 = v936.m_iHealth;
+            local v949 = v910(v936, v937);
+            v949 = math.floor(v949);
+            if l_m_iHealth_0 <= v949 then
+                v923(v935, color(255, 0, 50, 255), "FATAL");
+            elseif v949 > 0 then
+                v923(v935, color(252, 243, 105, 255), string.format("-%d HP", v949));
+            end;
+            return;
+        end;
+    end;
+    local function v959(v951, v952)
+        -- upvalues: v934 (ref), v950 (ref)
+        local v953 = entity.get_game_rules();
+        if v953 == nil then
+            return;
+        else
+            local v954 = entity.get_player_resource();
+            if v954 == nil then
+                return;
+            else
+                local l_m_bBombPlanted_0 = v953.m_bBombPlanted;
+                local l_m_iPlayerC4_0 = v954.m_iPlayerC4;
+                if l_m_iPlayerC4_0 ~= nil and l_m_iPlayerC4_0 ~= 0 then
+                    local v957 = entity.get(l_m_iPlayerC4_0);
+                    if v957 ~= nil then
+                        v934(v951, v957, v954);
+                    end;
+                end;
+                if l_m_bBombPlanted_0 then
+                    local v958 = entity.get_entities("CPlantedC4")[1];
+                    if v958 ~= nil then
+                        v950(v951, v952, v958);
+                    end;
+                end;
+                return;
+            end;
+        end;
+    end;
+    local function v982()
+        -- upvalues: l_v611_3 (ref), l_v607_8 (ref), l_v366_11 (ref), l_v874_0 (ref), v17 (ref), v923 (ref), l_v881_0 (ref), v959 (ref)
+        local v960 = entity.get_local_player();
+        if v960 == nil then
+            return;
+        else
+            local v961 = render.screen_size();
+            local v962 = vector(l_v611_3, v961.y - (v961.y - l_v607_8) * 0.5);
+            local v963 = l_v366_11.customize:get();
+            if v960:is_alive() then
+                local v964 = "PING";
+                if l_v366_11.items:get(v964) then
+                    if v963 then
+                        v964 = l_v366_11[v964]:get();
+                    end;
+                    local v965 = l_v874_0(v17.misc.main.other.fake_latency);
+                    if v965 > 0 then
+                        local v966 = utils.net_channel();
+                        if v966 ~= nil then
+                            local v967 = nil;
+                            local v968 = math.clamp(v966.latency[0] + v966.latency[1], 0.001, 0.2);
+                            local v969 = math.clamp(v965 * 0.001 + v966.avg_latency[1], 0.001, 0.2);
+                            local v970 = math.clamp(v968 / v969, 0, 1);
+                            if v970 < 0.5 then
+                                v967 = color(200, 200, 200, 255):lerp(color(213, 197, 84, 255), v970 * 2);
+                            else
+                                v967 = color(213, 197, 84, 255):lerp(color(143, 194, 21, 255), (v970 - 0.5) * 2);
+                            end;
+                            if v967 ~= nil then
+                                v923(v962, v967, v964);
+                            end;
+                        end;
+                    end;
+                end;
+                local v971 = "DT";
+                if l_v366_11.items:get(v971) then
+                    if v963 then
+                        v971 = l_v366_11[v971]:get();
+                    end;
+                    if l_v874_0(v17.rage.main.double_tap) and not l_v874_0(v17.antiaim.misc.fake_duck) then
+                        local v972 = color(255, 0, 50, 255);
+                        if rage.exploit:get() == 1 then
+                            v972 = color(255, 255, 255, 200);
+                        end;
+                        v923(v962, v972, v971);
+                    end;
+                end;
+                local v973 = "OSAA";
+                if l_v366_11.items:get(v973) then
+                    if v963 then
+                        v973 = l_v366_11[v973]:get();
+                    end;
+                    if l_v874_0(v17.rage.main.hide_shots) and not l_v874_0(v17.rage.main.double_tap) and not l_v874_0(v17.antiaim.misc.fake_duck) then
+                        v923(v962, color(255, 255, 255, 200), v973);
+                    end;
+                end;
+                local v974 = "DUCK";
+                if l_v366_11.items:get(v974) then
+                    if v963 then
+                        v974 = l_v366_11[v974]:get();
+                    end;
+                    if l_v874_0(v17.antiaim.misc.fake_duck) then
+                        v923(v962, color(255, 255, 255, 200), v974);
+                    end;
+                end;
+                local v975 = "DA";
+                if l_v366_11.items:get(v975) then
+                    if v963 then
+                        v975 = l_v366_11[v975]:get();
+                    end;
+                    if l_v874_0(v17.rage.main.dormant_aimbot) then
+                        local v976 = color(255, 0, 50, 255);
+                        if #entity.get_players(true, false) == 0 then
+                            v976 = color(255, 255, 255, 200);
+                        end;
+                        v923(v962, v976, "DA");
+                    end;
+                end;
+                local v977 = "SAFE";
+                if l_v366_11.items:get(v977) then
+                    if v963 then
+                        v977 = l_v366_11[v977]:get();
+                    end;
+                    if l_v874_0(v17.rage.safety.safe_points) == "Force" then
+                        v923(v962, color(255, 255, 255, 200), v977);
+                    end;
+                end;
+                local v978 = "BODY";
+                if l_v366_11.items:get(v978) then
+                    if v963 then
+                        v978 = l_v366_11[v978]:get();
+                    end;
+                    if l_v874_0(v17.rage.safety.body_aim) == "Force" then
+                        v923(v962, color(255, 255, 255, 200), v978);
+                    end;
+                end;
+                local v979 = "MD";
+                if l_v366_11.items:get(v979) then
+                    if v963 then
+                        v979 = l_v366_11[v979]:get();
+                    end;
+                    if l_v881_0(v17.rage.selection.min_damage) then
+                        v923(v962, color(255, 255, 255, 200), v979);
+                    end;
+                end;
+                local v980 = "HC";
+                if l_v366_11.items:get(v980) then
+                    if v963 then
+                        v980 = l_v366_11[v980]:get();
+                    end;
+                    if l_v881_0(v17.rage.selection.hit_chance) then
+                        v923(v962, color(255, 255, 255, 200), v980);
+                    end;
+                end;
+                local v981 = "FS";
+                if l_v366_11.items:get(v981) then
+                    if v963 then
+                        v981 = l_v366_11[v981]:get();
+                    end;
+                    if l_v874_0(v17.antiaim.angles.freestanding) then
+                        v923(v962, color(255, 255, 255, 200), v981);
+                    end;
+                end;
+            end;
+            if l_v366_11.items:get("C4") then
+                v959(v962, v960);
+            end;
+            return;
+        end;
+    end;
+    local _ = nil;
+    local function v985(v984)
+        -- upvalues: v982 (ref)
+        events.render(v982, v984:get());
+    end;
+    l_v366_11.enabled:set_callback(v985, true);
+end;
+v366 = nil;
+l_viewmodel_offset_z_0 = l_play_0.features.interface.manual_arrows;
+v586 = {
+    Small = 2, 
+    Bold = 4, 
+    Console = 3, 
+    Default = 1
+};
+v607 = color(0, 0, 0, 96);
+do
+    local l_l_viewmodel_offset_z_0_10, l_v586_10, l_v607_9, l_v608_6 = l_viewmodel_offset_z_0, v586, v607, v608;
+    l_v608_6 = function()
+        -- upvalues: l_play_0 (ref), l_l_viewmodel_offset_z_0_10 (ref), l_v607_9 (ref), l_v586_10 (ref)
+        local v990 = entity.get_local_player();
+        if v990 == nil or not v990:is_alive() then
+            return;
+        else
+            local v991 = render.screen_size() * 0.5;
+            local v992 = l_play_0.antiaim.hotkeys.manual_yaw.direction:get();
+            local v993 = l_l_viewmodel_offset_z_0_10.style:get();
+            local v994 = l_l_viewmodel_offset_z_0_10.offset:get();
+            local v995 = l_l_viewmodel_offset_z_0_10.color:get();
+            if v993 == "TeamSkeet" then
+                local v996 = 2;
+                local v997 = 18;
+                local v998 = 2;
+                local v999 = math.floor(v997 * 0.75);
+                local v1000 = rage.antiaim:get_rotation(false);
+                local v1001 = rage.antiaim:get_rotation(true);
+                local v1002 = math.normalize_yaw(v1001 - v1000);
+                local v1003 = v1002 < 0;
+                local v1004 = v1002 > 0;
+                local _ = nil;
+                local v1006 = v991 - vector(v994, 0);
+                local v1007 = vector(v996, v997);
+                local v1008 = v1006 - vector(v1007.x, v1007.y * 0.5);
+                local v1009 = v1003 and v995 or l_v607_9;
+                local v1010 = v992 == "Left" and v995 or l_v607_9;
+                render.rect(v1008, v1008 + v1007, v1009);
+                v1006.x = v1006.x - (v1007.x + v998);
+                local v1011 = vector(v1006.x, v1006.y - v997 * 0.5);
+                local v1012 = vector(v1006.x, v1006.y + v997 * 0.5);
+                local v1013 = vector(v1006.x - v999, v1006.y);
+                render.poly(v1010, v1011, v1012, v1013);
+                v1006 = nil;
+                v1007 = v991 + vector(v994 + 1, 0);
+                v1008 = vector(v996, v997);
+                v1009 = v1007 - vector(0, v1008.y * 0.5);
+                v1010 = v1004 and v995 or l_v607_9;
+                v1011 = v992 == "Right" and v995 or l_v607_9;
+                render.rect(v1009, v1009 + v1008, v1010);
+                v1007.x = v1007.x + (v1008.x + v998);
+                v1012 = vector(v1007.x, v1007.y - v997 * 0.5);
+                v1013 = vector(v1007.x, v1007.y + v997 * 0.5);
+                local v1014 = vector(v1007.x + v999, v1007.y);
+                render.poly(v1011, v1012, v1013, v1014);
+            end;
+            local v1015 = l_v586_10[l_l_viewmodel_offset_z_0_10.font:get()];
+            if v993 == "Custom" then
+                if v992 == "Left" then
+                    local v1016 = l_l_viewmodel_offset_z_0_10.left:get();
+                    local v1017 = render.measure_text(v1015, "s", v1016);
+                    local v1018 = vector(v991.x - v1017.x - v994 + 1, v991.y - v1017.y * 0.5 - 1);
+                    render.text(v1015, v1018, v995, "s", v1016);
+                end;
+                if v992 == "Right" then
+                    local v1019 = l_l_viewmodel_offset_z_0_10.right:get();
+                    local v1020 = render.measure_text(v1015, "s", v1019);
+                    local v1021 = vector(v991.x + v994, v991.y - v1020.y * 0.5 - 1);
+                    render.text(v1015, v1021, v995, "s", v1019);
+                end;
+                return;
+            else
+                return;
+            end;
+        end;
+    end;
+    v609 = nil;
+    v610 = function(v1022)
+        -- upvalues: l_v608_6 (ref)
+        events.render(l_v608_6, v1022:get());
+    end;
+    l_l_viewmodel_offset_z_0_10.enabled:set_callback(v610, true);
+end;
+l_viewmodel_offset_z_0 = nil;
+v586 = l_play_0.features.interface.damage_indicator;
+v607 = {
+    Small = 2, 
+    Bold = 4, 
+    Console = 3, 
+    Default = 1
+};
+v608 = 4;
+v609 = 4;
+v610 = 0;
+v611 = render.screen_size();
+v868 = l_angles_0.new("damage_indicator"):build(v611 * 0.5);
+v869 = v17.rage.selection.min_damage;
+do
+    local l_v586_11, l_v607_10, l_v608_7, l_v609_5, l_v610_4, l_v868_1, l_v869_1, l_v871_1 = v586, v607, v608, v609, v610, v868, v869, v871;
+    v870 = function()
+        -- upvalues: l_v869_1 (ref)
+        local v1031 = ui.get_binds(true);
+        for v1032 = 1, #v1031 do
+            local v1033 = v1031[v1032];
+            local l_value_1 = v1033.value;
+            local l_reference_1 = v1033.reference;
+            if l_reference_1:get() == l_value_1 and l_reference_1:id() == l_v869_1:id() then
+                return true;
+            end;
+        end;
+        return false;
+    end;
+    l_v871_1 = function()
+        -- upvalues: l_v868_1 (ref), l_v610_4 (ref), v65 (ref), l_v869_1 (ref), l_v586_11 (ref), l_v607_10 (ref), l_v608_7 (ref), l_v609_5 (ref)
+        local v1036 = entity.get_local_player();
+        if v1036 == nil or not v1036:is_alive() then
+            return;
+        else
+            local v1037 = l_v868_1:get_pos():clone();
+            local v1038 = ui.get_alpha() > 0.5;
+            l_v610_4 = v65.interp(l_v610_4, v1038, 0.05);
+            local v1039 = l_v869_1:get();
+            local v1040 = l_v586_11.font:get();
+            local v1041 = l_v586_11.color:get();
+            local v1042 = tostring(v1039);
+            local v1043 = l_v607_10[v1040];
+            local v1044 = render.measure_text(v1043, nil, v1042) + vector(l_v608_7, l_v609_5) * 2;
+            render.text(v1043, v1037 + v1044 * 0.5, v1041, "c", v1042);
+            render.rect_outline(v1037, v1037 + v1044, color(255, 255, 255, 255 * l_v610_4), 1, 4);
+            l_v868_1:set_size(v1044);
+            return;
+        end;
+    end;
+    v874 = nil;
+    v881 = function(v1045)
+        -- upvalues: l_v871_1 (ref)
+        events.render(l_v871_1, v1045:get());
+    end;
+    l_v586_11.enabled:set_callback(v881, true);
+end;
+v586 = nil;
+v607 = l_play_0.features.interface.velocity_warning;
+v608 = 4;
+v609 = 6;
+v610 = 168;
+v611 = 34;
+v868 = 160;
+v869 = 4;
+v870 = 0;
+v871 = render.screen_size();
+v874 = l_angles_0.new("velocity_warning"):build(vector(v871.x * 0.5 - v610 * 0.5, 160));
+do
+    local l_v607_11, l_v608_8, l_v609_6, l_v610_5, l_v611_4, l_v868_2, l_v869_2, l_v870_1, l_v874_1, l_v881_1 = v607, v608, v609, v610, v611, v868, v869, v870, v874, v881;
+    l_v881_1 = function()
+        -- upvalues: l_v874_1 (ref), l_v870_1 (ref), v65 (ref), l_v607_11 (ref), l_v610_5 (ref), l_v608_8 (ref), l_v609_6 (ref), l_v868_2 (ref), l_v869_2 (ref), l_v611_4 (ref)
+        local v1056 = entity.get_local_player();
+        if v1056 == nil then
+            return;
+        else
+            local v1057 = l_v874_1:get_pos():clone();
+            local v1058 = v1056:is_alive();
+            local v1059 = ui.get_alpha() > 0.5;
+            local l_m_flVelocityModifier_0 = v1056.m_flVelocityModifier;
+            if not v1058 then
+                l_m_flVelocityModifier_0 = 1;
+            end;
+            local v1061 = v1059 or v1058 and l_m_flVelocityModifier_0 < 1;
+            l_v870_1 = v65.interp(l_v870_1, v1061, 0.05);
+            if l_v870_1 <= 0 then
+                return;
+            else
+                local v1062 = l_v607_11.color:get();
+                local v1063 = color(0, 0, 0, 255);
+                local v1064 = color(255, 255, 255, 255);
+                local l_l_v870_1_0 = l_v870_1;
+                v1062.a = v1062.a * l_l_v870_1_0;
+                v1063.a = v1063.a * l_l_v870_1_0;
+                v1064.a = v1064.a * l_l_v870_1_0;
+                local v1066 = string.format("Max velocity reduced by %d%%", l_m_flVelocityModifier_0 * 100);
+                local v1067 = 1;
+                local v1068 = render.measure_text(v1067, nil, v1066);
+                local v1069 = v1057 + vector(l_v610_5 * 0.5 - v1068.x * 0.5, l_v608_8);
+                render.text(v1067, v1069, v1064, nil, v1066);
+                v1057.y = v1069.y + v1068.y + l_v609_6;
+                if v1062.a > 0 then
+                    local v1070 = vector(l_v868_2, l_v869_2);
+                    local v1071 = v1057 + vector(l_v610_5 * 0.5 - v1070.x * 0.5, 0);
+                    local v1072 = vector(l_v868_2 * l_m_flVelocityModifier_0, l_v869_2);
+                    render.shadow(v1071, v1071 + v1070, v1062, 24, 0, 4);
+                    render.rect(v1071, v1071 + v1070, v1063, 4);
+                    render.rect(v1071 + 1, v1071 + v1072 - 1, v1062, 4);
+                end;
+                l_v874_1:set_size(vector(l_v610_5, l_v611_4));
+                return;
+            end;
+        end;
+    end;
+    v887 = nil;
+    local function v1074(v1073)
+        -- upvalues: l_v881_1 (ref)
+        events.render(l_v881_1, v1073:get());
+    end;
+    l_v607_11.enabled:set_callback(v1074, true);
+end;
+l_angles_0 = nil;
+v363 = nil;
+v365 = l_play_0.features.visuals.animations;
+v366 = ffi.typeof("            struct {\n                float  m_flLayerAnimtime;\n                float  m_flLayerFadeOuttime;\n    \n                // dispatch flags\n                void  *m_pDispatchedStudioHdr;\n                int    m_nDispatchedSrc;\n                int    m_nDispatchedDst;\n    \n                int    m_nOrder;\n                int    m_nSequence;\n                float  m_flPrevCycle;\n                float  m_flWeight;\n                float  m_flWeightDeltaRate;\n    \n                // used for automatic crossfades between sequence changes;\n                float  m_flPlaybackRate;\n                float  m_flCycle;\n                int    m_pOwner;\n                int    m_nInvalidatePhysicsBits;\n            } **\n        ");
+do
+    local l_v365_9, l_v366_12, l_l_viewmodel_offset_z_0_11, l_v586_12, l_v607_12, l_v608_9, l_v609_7, l_v610_6, l_v611_5, l_v868_3, l_v869_3, l_v870_2 = v365, v366, l_viewmodel_offset_z_0, v586, v607, v608, v609, v610, v611, v868, v869, v870;
+    l_l_viewmodel_offset_z_0_11 = function(v1087)
+        -- upvalues: l_v366_12 (ref)
+        return ffi.cast(l_v366_12, ffi.cast("uintptr_t", v1087[0]) + 10640)[0];
+    end;
+    l_v586_12 = 6;
+    l_v607_12 = 12;
+    l_v608_9 = function(v1088)
+        -- upvalues: l_v365_9 (ref), v17 (ref)
+        local v1089 = l_v365_9.on_ground:get();
+        if v1089 == "Static" then
+            v1088.m_flPoseParameter[0] = 1;
+            v17.antiaim.misc.leg_movement:override("Sliding");
+            return;
+        elseif v1089 == "Jitter" then
+            if globals.tickcount % 4 > 1 then
+                v1088.m_flPoseParameter[0] = 1;
+                v1088.m_flPoseParameter[1] = 1;
+            end;
+            v17.antiaim.misc.leg_movement:override("Sliding");
+            return;
+        elseif v1089 == "Walking" then
+            v1088.m_flPoseParameter[7] = 0;
+            v17.antiaim.misc.leg_movement:override("Walking");
+            return;
+        elseif v1089 == "Kangaroo" then
+            v1088.m_flPoseParameter[0] = utils.random_float(0, 1);
+            v17.antiaim.misc.leg_movement:override("Sliding");
+            return;
+        else
+            v17.antiaim.misc.leg_movement:override();
+            return;
+        end;
+    end;
+    l_v609_7 = function(v1090)
+        -- upvalues: l_v365_9 (ref), l_l_viewmodel_offset_z_0_11 (ref), l_v586_12 (ref)
+        local v1091 = l_v365_9.in_air:get();
+        if v1091 == "Static" then
+            v1090.m_flPoseParameter[6] = 1;
+            return;
+        elseif v1091 == "Jitter" then
+            v1090.m_flPoseParameter[6] = globals.tickcount % 4 > 1 and 1 or 0;
+            return;
+        elseif v1091 == "Walking" then
+            local v1092 = l_l_viewmodel_offset_z_0_11(v1090);
+            if v1092 == nil then
+                return;
+            else
+                local v1093 = v1092[l_v586_12];
+                if v1093 == nil then
+                    return;
+                else
+                    v1093.m_flWeight = 1;
+                    return;
+                end;
+            end;
+        elseif v1091 == "Kangaroo" then
+            v1090.m_flPoseParameter[6] = utils.random_float(0.1, 1);
+            return;
+        else
+            return;
+        end;
+    end;
+    l_v610_6 = function(v1094)
+        -- upvalues: l_v365_9 (ref)
+        if not l_v365_9.pitch_on_land:get() then
+            return;
+        else
+            local v1095 = v1094:get_anim_state();
+            if v1095 == nil or not v1095.landing then
+                return;
+            else
+                v1094.m_flPoseParameter[12] = 0.5;
+                return;
+            end;
+        end;
+    end;
+    l_v611_5 = function(v1096)
+        -- upvalues: l_v365_9 (ref)
+        if not l_v365_9.sliding_slowwalk:get() then
+            return;
+        else
+            v1096.m_flPoseParameter[9] = 0;
+            return;
+        end;
+    end;
+    l_v868_3 = function(v1097)
+        -- upvalues: l_v365_9 (ref)
+        if not l_v365_9.sliding_crouch:get() then
+            return;
+        else
+            v1097.m_flPoseParameter[8] = 0;
+            return;
+        end;
+    end;
+    l_v869_3 = function(v1098)
+        -- upvalues: l_l_viewmodel_offset_z_0_11 (ref), l_v607_12 (ref), l_v365_9 (ref)
+        local v1099 = l_l_viewmodel_offset_z_0_11(v1098);
+        if v1099 == nil then
+            return;
+        else
+            local v1100 = v1099[l_v607_12];
+            if v1100 == nil then
+                return;
+            elseif l_v365_9.earthquake:get() then
+                v1100.m_flWeight = utils.random_float(0, 1);
+                return;
+            else
+                local v1101 = l_v365_9.move_lean:get();
+                if v1101 == -1 then
+                    return;
+                else
+                    v1100.m_flWeight = v1101 * 0.01;
+                    return;
+                end;
+            end;
+        end;
+    end;
+    l_v870_2 = function(v1102)
+        -- upvalues: l_v608_9 (ref), l_v609_7 (ref), l_v610_6 (ref), l_v611_5 (ref), l_v868_3 (ref), l_v869_3 (ref)
+        local v1103 = entity.get_local_player();
+        if v1102 ~= v1103 then
+            return;
+        else
+            l_v608_9(v1103);
+            l_v609_7(v1103);
+            l_v610_6(v1103);
+            l_v611_5(v1103);
+            l_v868_3(v1103);
+            l_v869_3(v1103);
+            return;
+        end;
+    end;
+    v871 = nil;
+    v874 = function(v1104)
+        -- upvalues: v17 (ref), l_v870_2 (ref)
+        local v1105 = v1104:get();
+        if not v1105 then
+            v17.antiaim.misc.leg_movement:override();
+        end;
+        events.post_update_clientside_animation(l_v870_2, v1105);
+    end;
+    l_v365_9.enabled:set_callback(v874, true);
+end;
+v365 = nil;
+v366 = l_play_0.features.visuals.scope_overlay;
+l_viewmodel_offset_z_0 = 0;
+do
+    local l_v366_13, l_l_viewmodel_offset_z_0_12, l_v586_13 = v366, l_viewmodel_offset_z_0, v586;
+    l_v586_13 = function()
+        -- upvalues: l_l_viewmodel_offset_z_0_12 (ref), v65 (ref), v17 (ref), l_v366_13 (ref)
+        local v1109 = entity.get_local_player();
+        if v1109 == nil or not v1109:is_alive() then
+            return;
+        else
+            local v1110 = v1109:get_player_weapon();
+            if v1110 == nil then
+                return;
+            else
+                l_l_viewmodel_offset_z_0_12 = v65.interp(l_l_viewmodel_offset_z_0_12, v1109.m_bIsScoped, 0.05);
+                if l_l_viewmodel_offset_z_0_12 <= 0 then
+                    return;
+                else
+                    v17.visuals.world.main.scope_overlay:override("Remove All");
+                    local v1111 = render.screen_size() * 0.5;
+                    local v1112 = l_v366_13.size:get() * l_l_viewmodel_offset_z_0_12;
+                    local v1113 = l_v366_13.gap:get();
+                    local v1114 = l_v366_13.color:get();
+                    local v1115 = v1110:get_inaccuracy();
+                    if l_v366_13.additions:get("Spread Dependency") then
+                        v1113 = v1113 + v1115 * 100;
+                    end;
+                    local v1116 = v1114:clone();
+                    local v1117 = v1114:clone();
+                    if l_v366_13.additions:get("Inverted") then
+                        v1116.a = v1116.a * l_l_viewmodel_offset_z_0_12;
+                        v1117.a = 0;
+                    else
+                        v1116.a = 0;
+                        v1117.a = v1117.a * l_l_viewmodel_offset_z_0_12;
+                    end;
+                    local v1118 = 0;
+                    if l_v366_13.additions:get("Rotated") then
+                        v1118 = 45;
+                    end;
+                    if l_v366_13.additions:get("Animated") then
+                        v1118 = -(globals.realtime * 100 % 180 - 360);
+                    end;
+                    if v1118 ~= 0 then
+                        render.push_rotation(v1118);
+                    end;
+                    if not l_v366_13.exclude_lines:get("Top") then
+                        local v1119 = vector(v1111.x, v1111.y - (v1112 + v1113));
+                        local v1120 = vector(v1119.x + 1, v1111.y - v1113);
+                        render.gradient(v1119, v1120, v1116, v1116, v1117, v1117);
+                    end;
+                    if not l_v366_13.exclude_lines:get("Bottom") then
+                        local v1121 = vector(v1111.x, v1111.y + v1112 + v1113);
+                        local v1122 = vector(v1121.x + 1, v1111.y + v1113);
+                        render.gradient(v1121, v1122, v1116, v1116, v1117, v1117);
+                    end;
+                    if not l_v366_13.exclude_lines:get("Left") then
+                        local v1123 = vector(v1111.x - (v1112 + v1113), v1111.y);
+                        local v1124 = vector(v1111.x - v1113, v1111.y + 1);
+                        render.gradient(v1123, v1124, v1116, v1117, v1116, v1117);
+                    end;
+                    if not l_v366_13.exclude_lines:get("Right") then
+                        local v1125 = vector(v1111.x + v1112 + v1113, v1111.y);
+                        local v1126 = vector(v1111.x + v1113, v1111.y + 1);
+                        render.gradient(v1125, v1126, v1116, v1117, v1116, v1117);
+                    end;
+                    if v1118 ~= 0 then
+                        render.pop_rotation();
+                    end;
+                    return;
+                end;
+            end;
+        end;
+    end;
+    v607 = nil;
+    v608 = function(v1127)
+        -- upvalues: v17 (ref), l_v586_13 (ref)
+        local v1128 = v1127:get();
+        if not v1128 then
+            v17.visuals.world.main.scope_overlay:override();
+        end;
+        events.render(l_v586_13, v1128);
+    end;
+    l_v366_13.enabled:set_callback(v608, true);
+end;
+v366 = nil;
+l_viewmodel_offset_z_0 = l_play_0.features.visuals.hit_marker;
+v586 = {};
+do
+    local l_l_viewmodel_offset_z_0_13, l_v586_14, l_v607_13, l_v608_10, l_v609_8 = l_viewmodel_offset_z_0, v586, v607, v608, v609;
+    l_v607_13 = function()
+        -- upvalues: l_v586_14 (ref)
+        l_v586_14 = {};
+    end;
+    l_v608_10 = function(v1134)
+        -- upvalues: l_v586_14 (ref)
+        local v1135 = {
+            position = v1134.aim, 
+            time = 3
+        };
+        table.insert(l_v586_14, 1, v1135);
+    end;
+    l_v609_8 = function()
+        -- upvalues: l_v586_14 (ref), l_l_viewmodel_offset_z_0_13 (ref)
+        local v1136 = entity.get_local_player();
+        if v1136 == nil or not v1136:is_alive() then
+            return;
+        else
+            local v1137 = render.screen_size() * 0.5;
+            local l_frametime_3 = globals.frametime;
+            local v1139 = #l_v586_14;
+            for v1140 = v1139, 1, -1 do
+                local v1141 = l_v586_14[v1140];
+                if v1141.time > 0 then
+                    v1141.time = v1141.time - l_frametime_3;
+                else
+                    table.remove(l_v586_14, v1139);
+                end;
+            end;
+            local v1142 = l_l_viewmodel_offset_z_0_13.thickness:get() * 0.5;
+            local v1143 = l_l_viewmodel_offset_z_0_13.size:get() + v1142;
+            local v1144 = l_l_viewmodel_offset_z_0_13.color:get();
+            if l_l_viewmodel_offset_z_0_13.type:get("World") then
+                for v1145 = 1, #l_v586_14 do
+                    local v1146 = l_v586_14[v1145];
+                    local v1147 = render.world_to_screen(v1146.position);
+                    if v1147 ~= nil then
+                        local v1148 = math.clamp(v1146.time, 0, 1);
+                        local v1149 = v1144:clone();
+                        local v1150 = v1147 - vector(v1142, v1143);
+                        local v1151 = v1147 + vector(v1142, v1143);
+                        local v1152 = v1147 - vector(v1143, v1142);
+                        local v1153 = v1147 + vector(v1143, v1142);
+                        v1149.a = v1149.a * v1148;
+                        render.rect(v1150, v1151, v1149);
+                        render.rect(v1152, v1153, v1149);
+                    end;
+                end;
+            end;
+            if l_l_viewmodel_offset_z_0_13.type:get("Screen") then
+                local v1154 = l_v586_14[1];
+                if v1154 then
+                    local v1155 = math.clamp(v1154.time, 0, 1);
+                    local v1156 = color(255, 255, 255, 255);
+                    v1156.a = v1156.a * v1155;
+                    render.line(vector(v1137.x - 10, v1137.y - 10), vector(v1137.x - 5, v1137.y - 5), v1156);
+                    render.line(vector(v1137.x + 10, v1137.y - 10), vector(v1137.x + 5, v1137.y - 5), v1156);
+                    render.line(vector(v1137.x + 10, v1137.y + 10), vector(v1137.x + 5, v1137.y + 5), v1156);
+                    render.line(vector(v1137.x - 10, v1137.y + 10), vector(v1137.x - 5, v1137.y + 5), v1156);
+                end;
+            end;
+            return;
+        end;
+    end;
+    v610 = nil;
+    v611 = function(v1157)
+        -- upvalues: l_v607_13 (ref), l_v609_8 (ref), l_v608_10 (ref)
+        local v1158 = v1157:get();
+        if not v1158 then
+            l_v607_13();
+        end;
+        events.render(l_v609_8, v1158);
+        events.aim_ack(l_v608_10, v1158);
+    end;
+    l_l_viewmodel_offset_z_0_13.enabled:set_callback(v611, true);
+end;
+l_viewmodel_offset_z_0 = nil;
+v586 = l_play_0.features.visuals.nade_radius;
+do
+    local l_v586_15, l_v607_14 = v586, v607;
+    l_v607_14 = function()
+        -- upvalues: l_v586_15 (ref)
+        if entity.get_local_player() == nil then
+            return;
+        else
+            local v1161 = l_v586_15.molotov_color:get();
+            local v1162 = l_v586_15.smoke_color:get();
+            if l_v586_15.molotov:get() then
+                entity.get_entities("CInferno", nil, function(v1163)
+                    -- upvalues: v1161 (ref)
+                    local v1164 = v1163:get_origin();
+                    local v1165 = v1163:get_bbox();
+                    local v1166 = v1161:alpha_modulate(v1165.alpha * 255);
+                    render.circle_3d_outline(v1164, v1166, 125, 0, 1, 1.5);
+                end);
+            end;
+            if l_v586_15.smoke:get() then
+                entity.get_entities("CSmokeGrenadeProjectile", nil, function(v1167)
+                    -- upvalues: v1162 (ref)
+                    if not v1167.m_bDidSmokeEffect then
+                        return;
+                    else
+                        local v1168 = v1167:get_origin();
+                        local v1169 = v1167:get_bbox();
+                        local v1170 = v1162:alpha_modulate(v1169.alpha * 255);
+                        render.circle_3d_outline(v1168, v1170, 125, 0, 1, 1.5);
+                        return;
+                    end;
+                end);
+            end;
+            return;
+        end;
+    end;
+    v608 = nil;
+    v609 = function(v1171)
+        -- upvalues: l_v607_14 (ref)
+        events.render(l_v607_14, v1171:get());
+    end;
+    l_v586_15.enabled:set_callback(v609, true);
+end;
+v586 = nil;
+v607 = l_play_0.features.visuals.keep_model_transparency;
+v608 = function()
+    local v1172 = entity.get_local_player();
+    if v1172 == nil or not v1172:is_alive() then
+        return;
+    else
+        local l_m_bIsScoped_0 = v1172.m_bIsScoped;
+        local l_m_bResumeZoom_0 = v1172.m_bResumeZoom;
+        if not l_m_bIsScoped_0 and not l_m_bResumeZoom_0 then
+            return;
+        else
+            return 59;
+        end;
+    end;
+end;
+v609 = nil;
+do
+    local l_v608_11 = v608;
+    v610 = function(v1176)
+        -- upvalues: l_v608_11 (ref)
+        events.localplayer_transparency(l_v608_11, v1176:get());
+    end;
+    v607.enabled:set_callback(v610, true);
+end;
+v363 = nil;
+ui.sidebar(v9.name, v9.icon);
